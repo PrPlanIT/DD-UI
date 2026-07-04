@@ -5,7 +5,7 @@
 - Docker reachable from the DD-UI backend to each host you list (TCP or local socket).
 - PostgreSQL 14+
 - Node 18+ (for dev UI), Go 1.21+ (backend)
-- OIDC provider (tested with Zitadel) or run in “local only” with `/api/session` returning no user (login page will redirect).
+- **OIDC provider — required** (Zitadel/Keycloak/Authentik/Okta/Auth0; tested with Zitadel). DD-UI has no local accounts.
 - **SOPS 3.10+** available on the backend host/container (DD-UI calls `sops` by name).  
   The provided Docker image installs it to `/usr/local/bin/sops`.
 

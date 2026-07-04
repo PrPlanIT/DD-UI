@@ -9,10 +9,11 @@
 - This project is built and maintained by **one person**. A large portion of the current codebase landed in **~1 week** of focused work.
 - Development will continue and is driven by the maintainer’s available time.
 - DD-UI is **opinionated**—it reflects how I run Docker in my homelab (declarative IaC, secrets via SOPS/AGE, minimal ceremony). If that resonates, you’ll likely feel right at home.
-- I am working on two other projects currently, the most important one being one I am being paid to work on. And the other one is a *suprise* for some of you who endorsed my other projects. This will be running home prod for me so it does not make it any less of a priority, but now I have achieved functionality preview I am feeling I might slow the base and trickle minor bugfixes daily. It's honestly not that much left to do and I wanna make sure I am not neglecting the project I am getting paid for.
+- Realistically, DD-UI shares my time with a handful of other projects and the orgs I support — I especially want to get **StageFreight** solid, and there's **DisplayWizard** and plenty more I'd love to push on. DD-UI isn't backed by a big community or sponsorships, so it competes with everything else on my plate, and I can only do so much at once. Expect modest but steady progress: minor fixes trickled as I can, bigger features when I get a focused stretch. It runs my own home prod, so it's not going anywhere — just don't expect a full-time pace.
 
 ## Planned / Known Issues
 
+- **Git sync is currently unstable.** GitRepository syncing (one-tree backup/restore of stack configuration) is being reworked — pending fix.
 - Bug when a file is open outside DD-UI it can create an empty temp file next to the file after saving.
 - Maybe an enhanced approach for caching tags of orphaned / stranded images, the current approach for some images that are built at runtime it can be weird seeing it as just ?? in the menu. I want visibility for that.
 - Groups and internal DD-UI variable are of the few things planned to test next. The GUI is ready, the inventory system can read and interpret all the files. I just need to validate that drift and prune is properly working and then its just putting this into home prod and seeing if it lets me down

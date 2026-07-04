@@ -1,0 +1,450 @@
+version: 1
+
+ci:
+  image: docker.cr.pcfae.com/prplanit/stagefreight:latest-dev
+
+matchers:
+  branches:
+    main: "^main$"
+
+vars:
+  org: prplanit
+  github_org: PrPlanIT
+  gitlab_group: PrPlanIT
+  repo: dd-ui
+  github_repo: DD-UI
+
+versioning:
+  tag_sources:
+    - id: stable
+      pattern: "^v?\\d+\\.\\d+\\.\\d+$"
+    - id: prerelease
+      pattern: "^v?\\d+\\.\\d+\\.\\d+-.+"
+  branch_builds:
+    - id: default
+      base_from: [stable]
+      format: "{base}-dev+{sha}"
+  no_lineage:
+    mode: error
+
+builds:
+  # Multi-stage Dockerfile build — the themed error-page nginx/openresty image.
+  # Image-only project: no binary engine.
+  - id: dd-ui
+    kind: docker
+    platforms: [linux/amd64]
+
+forges:
+  - id: gitlab
+    provider: gitlab
+    url: "https://gitlab.prplanit.com"
+    credentials: GITLAB
+
+  - id: github
+    provider: github
+    url: "https://github.com"
+    credentials: GITHUB
+
+repos:
+  - id: primary
+    forge: gitlab
+    project: "{var:gitlab_group}/{var:repo}"
+    roles: [primary]
+    branches:
+      default: main
+    worktree: "."
+
+  - id: github-mirror
+    forge: github
+    project: "{var:github_org}/{var:github_repo}"
+    roles: [mirror, publish-origin]
+    sync:
+      git: true
+      releases: true
+
+registries:
+  - id: dockerhub
+    provider: docker
+    url: docker.io
+    credentials: DOCKER
+    default_path: "{var:org}/{var:repo}"
+
+  - id: harbor
+    provider: harbor
+    url: cr.pcfae.com
+    credentials: HARBOR
+    default_path: "{var:org}/{var:repo}"
+
+  # GitHub Container Registry — second public registry alongside Docker Hub.
+  # ghcr namespace = github owner, lowercased ({var:org} == lowercased PrPlanIT).
+  - id: ghcr
+    provider: ghcr
+    url: ghcr.io
+    credentials: GHCR
+    default_path: "{var:org}/{var:repo}"
+
+targets:
+  # ── Docker Hub: stable releases ─────────────────────────────────
+  - id: dockerhub-stable
+    kind: registry
+    registry: dockerhub
+    build: dd-ui
+    tags: ["v{version}", "latest"]
+    when: { git_tags: [stable], events: [tag] }
+
+  # ── Docker Hub: pre-releases (alpha/beta/rc) ────────────────────
+  - id: dockerhub-prerelease
+    kind: registry
+    registry: dockerhub
+    build: dd-ui
+    tags: ["v{version}"]
+    when: { git_tags: [prerelease], events: [tag] }
+
+  # ── Docker Hub: dev builds on every commit ───────────────────────
+  - id: dockerhub-dev
+    kind: registry
+    registry: dockerhub
+    build: dd-ui
+    tags: ["dev-{sha:8}", "latest-dev"]
+    when: { branches: [main], events: [push] }
+    retention:
+      keep_last: 6
+      protect: ["latest-dev"]
+
+  # ── GHCR: stable releases ───────────────────────────────────────
+  - id: ghcr-stable
+    kind: registry
+    registry: ghcr
+    build: dd-ui
+    tags: ["v{version}", "latest"]
+    when: { git_tags: [stable], events: [tag] }
+
+  # ── GHCR: pre-releases (alpha/beta/rc) ──────────────────────────
+  - id: ghcr-prerelease
+    kind: registry
+    registry: ghcr
+    build: dd-ui
+    tags: ["v{version}"]
+    when: { git_tags: [prerelease], events: [tag] }
+
+  # ── GHCR: dev builds on every commit ────────────────────────────
+  - id: ghcr-dev
+    kind: registry
+    registry: ghcr
+    build: dd-ui
+    tags: ["dev-{sha:8}", "latest-dev"]
+    when: { branches: [main], events: [push] }
+
+  # ── Harbor: dev builds on every commit ──────────────────────────
+  - id: harbor-dev
+    kind: registry
+    registry: harbor
+    build: dd-ui
+    tags: ["dev-{sha:8}", "latest-dev"]
+    when: { branches: [main], events: [push] }
+
+  # ── Harbor: stable releases ─────────────────────────────────────
+  - id: harbor-stable
+    kind: registry
+    registry: harbor
+    build: dd-ui
+    tags: ["v{version}", "latest"]
+    when: { git_tags: [stable], events: [tag] }
+
+  # ── Docker Hub: README sync ──────────────────────────────────────
+  - id: dockerhub-readme
+    kind: docker-readme
+    registry: dockerhub
+    when: { branches: [main], events: [push, tag] }
+    file: "README.md"
+    description: "DD-UI is a declarative, security-first Docker orchestration engine. Please Docker responsibly."
+
+  # ── Primary release (rolling git tag aliases) ────────────────────
+  - id: primary-release
+    kind: release
+    aliases: ["v{version}", "latest"]
+    when: { git_tags: [stable], events: [tag] }
+
+  # ── GitHub release (mirror) ──────────────────────────────────────
+  - id: github-release
+    kind: release
+    mirror: github-mirror
+    sync_release: true
+    when: { git_tags: [stable], events: [tag] }
+
+build_cache:
+  mode: hybrid
+  external:
+    target: harbor-dev
+    path: "cache"
+    fallback: "main"
+  local:
+    retention:
+      max_age: "7d"
+      max_size: "8GB"
+
+commit:
+  default_type: docs
+  conventional: true
+  backend: git
+
+dependency:
+  enabled: true
+  output: ".stagefreight/deps"
+  scope:
+    dockerfile_env: true
+  commit:
+    enabled: true
+    type: chore
+    message: "update managed dependencies"
+    push: true
+    skip_ci: false
+
+docs:
+  enabled: true
+  generators:
+    badges: true
+    narrator: true
+    docker_readme: true
+  commit:
+    enabled: true
+    type: docs
+    message: "refresh generated docs and badges"
+    add:
+      - "README.md"
+      - ".stagefreight/badges"
+    push: true
+    skip_ci: true
+
+lint:
+  level: full
+  exclude:
+    - "*.png"
+    - "*.jpg"
+    - "*.gif"
+    - "*.svg"
+    - "*.ico"
+    - "*.webp"
+    - "*.woff"
+    - "*.woff2"
+    - "*.ttf"
+    - "example/screenshots/**"
+  modules:
+    freshness:
+      enabled: true
+      options:
+        cache_ttl: 300
+        sources:
+          docker_images: true
+          github_releases: true
+        vulnerability:
+          enabled: true
+    tabs:
+      enabled: true
+    secrets:
+      enabled: true
+    conflicts:
+      enabled: true
+    filesize:
+      enabled: true
+    unicode:
+      enabled: true
+      options:
+        detect_bidi: true
+        detect_zero_width: true
+        detect_control_ascii: true
+    direct-output:
+      enabled: true
+      exclude:
+        - "entrypoint.sh"
+
+release:
+  enabled: true
+  security_summary: ".stagefreight/security"
+  registry_links: true
+
+security:
+  enabled: true
+  output: ".stagefreight/security"
+  sbom: true
+  release_detail: full
+
+toolchains:
+  desired:
+    trivy:
+      version: "0.69.3"
+    syft:
+      version: "1.42.3"
+    grype:
+      version: "0.110.0"
+    osv-scanner:
+      version: "2.3.5"
+    cosign:
+      version: "3.0.6"
+
+badges:
+  items:
+    - id: build
+      text: build
+      value: "{env:BUILD_STATUS}"
+      color: auto
+      font: monofur
+      output: ".stagefreight/badges/build.svg"
+      link: "https://gitlab.prplanit.com/{var:gitlab_group}/{var:repo}/-/pipelines"
+    - id: license
+      text: license
+      value: "AGPL-3.0-or-later"
+      color: "#310937"
+      font: monofur
+      output: ".stagefreight/badges/license.svg"
+      link: LICENSE
+    - id: release
+      text: release
+      value: "v{base}"
+      color: "#74ecbe"
+      font: dejavu-sans
+      font_size: 11
+      output: ".stagefreight/badges/release.svg"
+      link: "https://github.com/{var:github_org}/{var:github_repo}/releases"
+    - id: updated
+      text: updated
+      value: "{env:BUILD_DATE}"
+      color: "#236144"
+      font: dejavu-sans
+      font_size: 11
+      output: ".stagefreight/badges/updated.svg"
+    - id: pulls
+      text: pulls
+      value: "{docker.pulls}"
+      color: "#1d63ed"
+      output: ".stagefreight/badges/pulls.svg"
+      link: "https://hub.docker.com/r/{var:org}/{var:repo}"
+    - id: release-latest
+      text: latest
+      value: "v{base}"
+      color: "#74ecbe"
+      output: ".stagefreight/badges/latest.svg"
+      link: "https://hub.docker.com/r/{var:org}/{var:repo}/tags?name=latest"
+    - id: dev-latest
+      text: latest-dev
+      value: "dev-{sha:8}"
+      color: "#3b82f6"
+      output: ".stagefreight/badges/latest-dev.svg"
+      link: "https://hub.docker.com/r/{var:org}/{var:repo}/tags?name=latest-dev"
+    - id: dev-updated
+      text: updated
+      value: "{docker.tag.latest-dev.updated}"
+      color: "#236144"
+      output: ".stagefreight/badges/dev-updated.svg"
+    - id: dev-size
+      text: size
+      value: "{docker.tag.latest-dev.size}"
+      color: "#555"
+      output: ".stagefreight/badges/dev-size.svg"
+      link: "https://hub.docker.com/r/{var:org}/{var:repo}/tags?name=latest-dev"
+
+narrator:
+  - file: "README.md"
+    items:
+      - id: badge.build
+        kind: badge_ref
+        ref: build
+        placement:
+          between: ["<!-- sf:badges:start -->", "<!-- sf:badges:end -->"]
+          mode: replace
+          inline: true
+      - id: badge.license
+        kind: badge_ref
+        ref: license
+        placement:
+          between: ["<!-- sf:badges:start -->", "<!-- sf:badges:end -->"]
+          mode: replace
+          inline: true
+      - id: badge.release
+        kind: badge_ref
+        ref: release
+        placement:
+          between: ["<!-- sf:badges:start -->", "<!-- sf:badges:end -->"]
+          mode: replace
+          inline: true
+      - id: badge.updated
+        kind: badge_ref
+        ref: updated
+        placement:
+          between: ["<!-- sf:badges:start -->", "<!-- sf:badges:end -->"]
+          mode: replace
+          inline: true
+      - id: shield.donate
+        kind: shield
+        placement:
+          between: ["<!-- sf:badges:start -->", "<!-- sf:badges:end -->"]
+          mode: replace
+          inline: true
+        shield: "badge/donate-FF5E5B?logo=ko-fi&logoColor=white"
+        link: "https://ko-fi.com/T6T41IT163"
+      - id: shield.sponsor
+        kind: shield
+        placement:
+          between: ["<!-- sf:badges:start -->", "<!-- sf:badges:end -->"]
+          mode: replace
+          inline: true
+        shield: "badge/sponsor-EA4AAA?logo=githubsponsors&logoColor=white"
+        link: "https://github.com/sponsors/{var:github_org}"
+
+      - id: project.github
+        kind: shield
+        placement:
+          between: ["<!-- sf:project:start -->", "<!-- sf:project:end -->"]
+          mode: replace
+          inline: true
+        shield: "badge/GitHub-source-181717?logo=github"
+        link: "https://github.com/{var:github_org}/{var:github_repo}"
+      - id: project.gitlab
+        kind: shield
+        placement:
+          between: ["<!-- sf:project:start -->", "<!-- sf:project:end -->"]
+          mode: replace
+          inline: true
+        shield: "badge/GitLab-source-FC6D26?logo=gitlab"
+        link: "https://gitlab.prplanit.com/{var:gitlab_group}/{var:repo}"
+      - id: project.last-commit
+        kind: props
+        type: github-last-commit
+        placement:
+          between: ["<!-- sf:project:start -->", "<!-- sf:project:end -->"]
+          mode: replace
+          inline: true
+        params:
+          repo: "{var:github_org}/{var:github_repo}"
+      - id: project.issues-open
+        kind: props
+        type: github-issues-open
+        placement:
+          between: ["<!-- sf:project:start -->", "<!-- sf:project:end -->"]
+          mode: replace
+          inline: true
+        params:
+          repo: "{var:github_org}/{var:github_repo}"
+      - id: project.contributors
+        kind: props
+        type: github-contributors
+        placement:
+          between: ["<!-- sf:project:start -->", "<!-- sf:project:end -->"]
+          mode: replace
+          inline: true
+        params:
+          repo: "{var:github_org}/{var:github_repo}"
+
+      - id: image.docker
+        kind: shield
+        placement:
+          between: ["<!-- sf:image:start -->", "<!-- sf:image:end -->"]
+          mode: replace
+        shield: "badge/Docker-{var:org}%2Fdd--ui-2496ED?logo=docker&logoColor=white"
+        link: "https://hub.docker.com/r/{var:org}/{var:repo}"
+      - id: image.pulls
+        kind: badge_ref
+        ref: pulls
+        placement:
+          between: ["<!-- sf:image:start -->", "<!-- sf:image:end -->"]
+          mode: replace
