@@ -192,6 +192,7 @@ dependency:
   enabled: true
   output: ".stagefreight/deps"
   scope:
+    go_modules: true
     dockerfile_env: true
   commit:
     enabled: true
