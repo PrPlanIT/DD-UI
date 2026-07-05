@@ -217,6 +217,28 @@ func flattenPorts(pm network.PortMap) []map[string]any {
 
 // ===== main scan =====
 
+// preferredContainerIP picks a container's IP from its network endpoints.
+// v29 dropped NetworkSettings.IPAddress, so the address now lives per-endpoint.
+// Prefer the default bridge (matching v28's old top-level field); otherwise pick
+// the lowest-named network with a valid address — deterministic, since Go map
+// iteration order is random.
+func preferredContainerIP(networks map[string]*network.EndpointSettings) string {
+	if ep := networks["bridge"]; ep != nil && ep.IPAddress.IsValid() {
+		return ep.IPAddress.String()
+	}
+	names := make([]string, 0, len(networks))
+	for name := range networks {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		if ep := networks[name]; ep != nil && ep.IPAddress.IsValid() {
+			return ep.IPAddress.String()
+		}
+	}
+	return ""
+}
+
 func ScanHostContainers(ctx context.Context, hostName string) (int, error) {
 	h, err := database.GetHostByName(ctx, hostName)
 	if err != nil {
@@ -288,26 +310,8 @@ func ScanHostContainers(ctx context.Context, hostName string) (int, error) {
 				portsOut = flattenPorts(ci.NetworkSettings.Ports)
 			}
 			// v29: NetworkSettings has no top-level IPAddress; the container IP
-			// now lives on each network endpoint. Prefer the default bridge (matches
-			// v28's top-level IPAddress); otherwise pick deterministically by network
-			// name, since map iteration order is random.
-			if ci.NetworkSettings.Networks != nil {
-				if ep := ci.NetworkSettings.Networks["bridge"]; ep != nil && ep.IPAddress.IsValid() {
-					ip = ep.IPAddress.String()
-				} else {
-					names := make([]string, 0, len(ci.NetworkSettings.Networks))
-					for name := range ci.NetworkSettings.Networks {
-						names = append(names, name)
-					}
-					sort.Strings(names)
-					for _, name := range names {
-						if ep := ci.NetworkSettings.Networks[name]; ep != nil && ep.IPAddress.IsValid() {
-							ip = ep.IPAddress.String()
-							break
-						}
-					}
-				}
-			}
+			// now lives on each network endpoint.
+			ip = preferredContainerIP(ci.NetworkSettings.Networks)
 		}
 		var envOut []string
 		if ci.Config != nil && ci.Config.Env != nil {
