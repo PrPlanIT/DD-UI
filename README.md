@@ -2,10 +2,13 @@
 > DD-UI is a declarative, security-first Docker orchestration engine. It compares runtime state (running containers) to declared state (your IaC repo), shows drift, and puts encryption (SOPS/AGE) and DevOps ergonomics first. **Please Docker responsibly.**
 
 <!-- sf:project:start -->
+[![badge/GitHub-source-181717?logo=github](https://img.shields.io/badge/GitHub-source-181717?logo=github)](https://github.com/PrPlanIT/DD-UI) [![badge/GitLab-source-FC6D26?logo=gitlab](https://img.shields.io/badge/GitLab-source-FC6D26?logo=gitlab)](https://gitlab.prplanit.com/PrPlanIT/dd-ui) [![Last Commit](https://img.shields.io/github/last-commit/PrPlanIT/DD-UI)](https://github.com/PrPlanIT/DD-UI/commits) [![Open Issues](https://img.shields.io/github/issues/PrPlanIT/DD-UI)](https://github.com/PrPlanIT/DD-UI/issues) [![Contributors](https://img.shields.io/github/contributors/PrPlanIT/DD-UI)](https://github.com/PrPlanIT/DD-UI/graphs/contributors)
 <!-- sf:project:end -->
 <!-- sf:badges:start -->
+[![build](https://raw.githubusercontent.com/PrPlanIT/DD-UI/main/.stagefreight/badges/build.svg)](https://gitlab.prplanit.com/PrPlanIT/dd-ui/-/pipelines) [![license](https://raw.githubusercontent.com/PrPlanIT/DD-UI/main/.stagefreight/badges/license.svg)](https://github.com/PrPlanIT/DD-UI/blob/main/LICENSE) [![release](https://raw.githubusercontent.com/PrPlanIT/DD-UI/main/.stagefreight/badges/release.svg)](https://github.com/PrPlanIT/DD-UI/releases) ![updated](https://raw.githubusercontent.com/PrPlanIT/DD-UI/main/.stagefreight/badges/updated.svg) [![badge/donate-FF5E5B?logo=ko-fi&logoColor=white](https://img.shields.io/badge/donate-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/T6T41IT163) [![badge/sponsor-EA4AAA?logo=githubsponsors&logoColor=white](https://img.shields.io/badge/sponsor-EA4AAA?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/PrPlanIT)
 <!-- sf:badges:end -->
 <!-- sf:image:start -->
+[![badge/Docker-prplanit%2Fdd--ui-2496ED?logo=docker&logoColor=white](https://img.shields.io/badge/Docker-prplanit%2Fdd--ui-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/r/prplanit/dd-ui) [![pulls](https://raw.githubusercontent.com/PrPlanIT/DD-UI/main/.stagefreight/badges/pulls.svg)](https://hub.docker.com/r/prplanit/dd-ui)
 <!-- sf:image:end -->
 
 ## What is DD-UI?
