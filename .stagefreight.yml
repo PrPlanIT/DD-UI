@@ -109,7 +109,7 @@ targets:
     registry: dockerhub
     build: dd-ui
     tags: ["dev-{sha:8}", "latest-dev"]
-    when: { branches: [main], events: [push, web] }
+    when: { branches: [main], events: [push, manual] }
     retention:
       keep_last: 6
       protect: ["latest-dev"]
@@ -136,7 +136,7 @@ targets:
     registry: ghcr
     build: dd-ui
     tags: ["dev-{sha:8}", "latest-dev"]
-    when: { branches: [main], events: [push, web] }
+    when: { branches: [main], events: [push, manual] }
 
   # ── Harbor: dev builds on every commit ──────────────────────────
   - id: harbor-dev
@@ -144,7 +144,7 @@ targets:
     registry: harbor
     build: dd-ui
     tags: ["dev-{sha:8}", "latest-dev"]
-    when: { branches: [main], events: [push, web] }
+    when: { branches: [main], events: [push, manual] }
 
   # ── Harbor: per-branch dev builds (feature branches → testable images) ──
   # Pushing a feature branch publishes an internal image to pull onto a host and
@@ -155,7 +155,7 @@ targets:
     registry: harbor
     build: dd-ui
     tags: ["dev-{branch}-{sha:8}", "latest-dev-{branch}"]
-    when: { branches: [feature], events: [push, web] }
+    when: { branches: [feature], events: [push, manual] }
 
   # ── Harbor: stable releases ─────────────────────────────────────
   - id: harbor-stable
