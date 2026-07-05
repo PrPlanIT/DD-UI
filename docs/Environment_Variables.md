@@ -107,3 +107,16 @@
 | `DD_UI_IAC_ROOT`          | —       | Root path to scan for IaC (Docker Compose) files; recommended `/data`.   |
 | `DD_UI_IAC_DIRNAME`       | `empty` | Optional subfolder under the root to scope scans; leave empty to use the root directly; recommended `docker-compose`. |
 
+
+### Logging
+
+Container-log history/search backend + the continuous collector.
+
+| Variable               | Default   | Description                                                                                                                                       |
+| ---------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DD_UI_LOG_BACKEND`    | `builtin` | Historical log source: `builtin` (dd-ui persists to its own Postgres), `loki` (query Loki — planned), or `live` (no history; live stream only). |
+| `DD_UI_LOG_COLLECTION` | `true`    | `true/false` — run the background collector that streams every container's logs (and persists them under `builtin`).                            |
+| `DD_UI_LOG_RETENTION`  | `48h`     | How long persisted logs are kept before pruning (Go duration, e.g. `24h`, `7d`). `builtin` only.                                                |
+
+The collector reuses `DD_UI_SCAN_DOCKER_HOST_TIMEOUT` for its per-host connect/list timeout, so an unresponsive host is skipped quickly instead of stalling collection.
+

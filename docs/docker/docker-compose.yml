@@ -91,6 +91,11 @@ services:
       - DD_UI_SCAN_IAC_AUTO=true
       - DD_UI_SCAN_IAC_INTERVAL=90s
 
+      # Logging Config - container log history/search
+      - DD_UI_LOG_BACKEND=builtin      # builtin (Postgres) | loki (planned) | live (no history)
+      - DD_UI_LOG_COLLECTION=true      # run the background collector + persistence
+      - DD_UI_LOG_RETENTION=48h        # how long persisted logs are kept (builtin)
+
     secrets:
       - oidc_client_id
       - oidc_client_secret
