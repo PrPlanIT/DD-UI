@@ -19,33 +19,11 @@ import (
 )
 
 // LogEntry represents a single log entry
-type LogEntry struct {
-	ID            int64             `json:"id,omitempty"`
-	Timestamp     string            `json:"timestamp"`
-	HostName      string            `json:"hostname"`
-	StackName     string            `json:"stack_name,omitempty"`
-	ServiceName   string            `json:"service_name"`
-	ContainerID   string            `json:"container_id"`
-	ContainerName string            `json:"container_name,omitempty"`
-	Level         string            `json:"level"`
-	Source        string            `json:"source"`
-	Message       string            `json:"message"`
-	Labels        map[string]string `json:"labels,omitempty"`
-}
+// LogEntry / LogFilter are the canonical log types (defined in common). Aliased
+// here so existing handler code keeps referring to them unqualified.
+type LogEntry = common.LogEntry
 
-// LogFilter represents filtering options for logs
-type LogFilter struct {
-	HostNames    []string  `json:"hostnames,omitempty"`
-	StackNames   []string  `json:"stacks,omitempty"`
-	ServiceNames []string  `json:"services,omitempty"`
-	Containers   []string  `json:"containers,omitempty"`
-	Levels       []string  `json:"levels,omitempty"`
-	Since        time.Time `json:"since,omitempty"`
-	Until        time.Time `json:"until,omitempty"`
-	Search       string    `json:"search,omitempty"`
-	Limit        int       `json:"limit,omitempty"`
-	Follow       bool      `json:"follow,omitempty"`
-}
+type LogFilter = common.LogFilter
 
 var (
 	// Global log subscribers
@@ -95,9 +73,10 @@ func HandleLogStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Start collecting logs from all hosts
+	// Live logs arrive via the background collector's broadcast — we're just a
+	// subscriber (registered above). No per-request collection; history is served
+	// by the LogSource path above when Follow is false.
 	ctx := r.Context()
-	go collectLogsFromHosts(ctx, filter)
 
 	// Stream logs to client
 	ticker := time.NewTicker(30 * time.Second)
@@ -126,68 +105,6 @@ func HandleLogStream(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "data: %s\n\n", string(data))
 			w.(http.Flusher).Flush()
 		}
-	}
-}
-
-// collectLogsFromHosts collects logs from all Docker hosts
-func collectLogsFromHosts(ctx context.Context, filter LogFilter) {
-	hosts := services.GetHosts()
-
-	var wg sync.WaitGroup
-	for _, host := range hosts {
-		// Check if host is in filter
-		if len(filter.HostNames) > 0 && !contains(filter.HostNames, host.Name) {
-			continue
-		}
-
-		wg.Add(1)
-		go func(h common.Host) {
-			defer wg.Done()
-			collectHostLogs(ctx, h, filter)
-		}(host)
-	}
-
-	wg.Wait()
-}
-
-// collectHostLogs collects logs from containers on a specific host
-func collectHostLogs(ctx context.Context, host common.Host, filter LogFilter) {
-	common.DebugLog("Starting log collection for host %s", host.Name)
-
-	// Create Docker client for this host
-	hostRow := database.HostRow{Name: host.Name, Addr: host.Addr, Vars: host.Vars}
-	cli, err := services.DockerClientForHost(hostRow)
-	if err != nil {
-		common.ErrorLog("Failed to create Docker client for %s: %v", host.Name, err)
-		return
-	}
-	defer cli.Close()
-
-	// List all containers
-	containers, err := cli.ContainerList(ctx, client.ContainerListOptions{All: false})
-	if err != nil {
-		common.ErrorLog("Failed to list containers on %s: %v", host.Name, err)
-		return
-	}
-
-	// Start log collection for each container
-	for _, cnt := range containers.Items {
-		// Check container filter
-		if len(filter.Containers) > 0 {
-			containerName := strings.TrimPrefix(cnt.Names[0], "/")
-			if !contains(filter.Containers, containerName) {
-				continue
-			}
-		}
-
-		// Get stack name from labels
-		stackName := cnt.Labels["com.docker.compose.project"]
-		if len(filter.StackNames) > 0 && !contains(filter.StackNames, stackName) {
-			continue
-		}
-
-		// Start streaming logs for this container
-		go streamContainerLogs(ctx, cli, host.Name, cnt, stackName)
 	}
 }
 
@@ -278,6 +195,7 @@ func streamContainerLogs(ctx context.Context, cli *client.Client, hostName strin
 
 					// Broadcast to all subscribers
 					broadcastLog(entry)
+					persistLog(entry) // builtin backend: batch-write to container_logs
 				}
 			}
 		}
@@ -391,54 +309,31 @@ func parseLogFilters(r *http.Request) LogFilter {
 // sendHistoricalLogs sends historical logs from the database
 func sendHistoricalLogs(w http.ResponseWriter, filter LogFilter) {
 	ctx := context.Background()
+	src := LogSourceBackend()
 
-	// Query historical logs from database
-	query := `
-		SELECT id, timestamp, hostname, stack_name, service_name,
-		       container_id, level, source, message
-		FROM container_logs
-		WHERE timestamp > NOW() - INTERVAL '1 hour'
-	`
-
-	rows, err := common.DB.Query(ctx, query)
+	// The backend (builtin Postgres today, loki later) applies host/stack/service/
+	// container/level/search + the Since/Until window + Limit in-store. matchesFilter
+	// is a final pass for the dd-ui-app stream-noise suppression the store can't know.
+	entries, err := src.Query(ctx, filter)
 	if err != nil {
-		common.ErrorLog("Failed to query historical logs: %v", err)
+		common.ErrorLog("Failed to query historical logs (%s backend): %v", src.Name(), err)
 		return
 	}
-	defer rows.Close()
 
 	count := 0
-	for rows.Next() {
-		var entry LogEntry
-		err := rows.Scan(
-			&entry.ID,
-			&entry.Timestamp,
-			&entry.HostName,
-			&entry.StackName,
-			&entry.ServiceName,
-			&entry.ContainerID,
-			&entry.Level,
-			&entry.Source,
-			&entry.Message,
-		)
-		if err != nil {
-			common.ErrorLog("Failed to scan log row: %v", err)
+	for _, entry := range entries {
+		if !matchesFilter(entry, filter) {
 			continue
 		}
-
-		if matchesFilter(entry, filter) {
-			data, _ := json.Marshal(entry)
-			fmt.Fprintf(w, "data: %s\n\n", string(data))
-			count++
-
-			if count >= filter.Limit {
-				break
-			}
-		}
+		data, _ := json.Marshal(entry)
+		fmt.Fprintf(w, "data: %s\n\n", string(data))
+		count++
 	}
 
-	w.(http.Flusher).Flush()
-	common.DebugLog("Sent %d historical log entries", count)
+	if f, ok := w.(http.Flusher); ok {
+		f.Flush()
+	}
+	common.DebugLog("Sent %d historical log entries (%s)", count, src.Name())
 }
 
 // contains checks if a slice contains a string

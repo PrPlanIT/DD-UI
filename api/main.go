@@ -20,6 +20,7 @@ import (
 
 	"dd-ui/common"
 	"dd-ui/database"
+	"dd-ui/handlers"
 	"dd-ui/services"
 )
 
@@ -113,6 +114,8 @@ func main() {
 	// kick off background auto-scanner (Portainer-ish cadence)
 	startAutoScanner(ctx)
 	startIacAutoScanner(ctx)
+	// continuous container-log collection + persistence (builtin log backend)
+	handlers.StartLogCollector(ctx)
 
 	r := makeRouter()
 
