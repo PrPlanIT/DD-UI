@@ -17,7 +17,7 @@ DD-UI is a **Docker management engine that puts DevOps and encryption first** �
 - **A rich experience.** Many of the features you'd expect from a Docker GUI, plus industry tools like xterm 🔥 and monaco (the editor from VS Code 🎉).
 - **Free and open source** under the **AGPL-3.0-or-later** — free forever for personal, homelab, non-profit, and commercial use alike (a commercial license is available if you need proprietary terms).
 
-<p align="center"><img src="example/screenshots/DD-UI-Host-Stacks.png" width="760" alt="DD-UI — every stack across every host in one view" /></p>
+<p align="center"><img src="docs/screenshots/DD-UI-Host-Stacks.png" width="760" alt="DD-UI — every stack across every host in one view" /></p>
 
 > 📸 **[See DD-UI in action →](docs/Screenshots.md)** — SOPS-encrypted stacks decrypted on the fly, live logs, in-container terminal, drift detection, cleanup, and more.
 

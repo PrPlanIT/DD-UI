@@ -1,0 +1,129 @@
+# Enhanced DD-UI Inventory Sample
+# This demonstrates all DD-UI metadata fields that can be used
+# All dd_ui_* fields are optional and ignored by Ansible
+
+all:
+  hosts:
+    # GPU-accelerated server with full DD-UI metadata
+    anchorage:
+      ansible_host: 10.30.1.122
+      ansible_user: kai
+      # DD-UI specific metadata
+      dd_ui_tags: ["docker", "gpu", "ml", "production"]
+      dd_ui_description: "High-performance GPU server for ML/AI workloads"
+      dd_ui_alt_name: "🚀 GPU Server 1"
+      dd_ui_tenant: "engineering"
+      dd_ui_allowed_users: ["alice", "bob", "charlie"]
+      dd_ui_owner: "alice"
+      dd_ui_env:
+        CUDA_VERSION: "11.8"
+        GPU_COUNT: "4"
+        MODEL_PATH: "/models/production"
+    
+    # Automation controller with minimal DD-UI fields
+    ant-parade:
+      ansible_host: 10.30.1.111
+      dd_ui_tags: ["automation", "management", "controller"]
+      dd_ui_description: "Primary automation controller"
+      dd_ui_owner: "devops-team"
+    
+    # Basic host with no DD-UI metadata (still works fine)
+    leaf-cutter:
+      ansible_host: 10.13.37.141
+
+# Group with DD-UI metadata in vars
+proxmox:
+  vars:
+    ansible_user: root
+    # DD-UI metadata for the group
+    dd_ui_tags: ["hypervisor", "infrastructure", "critical"]
+    dd_ui_description: "Proxmox virtualization cluster"
+    dd_ui_alt_name: "Hypervisor Cluster"
+    dd_ui_tenant: "infrastructure"
+    dd_ui_allowed_users: ["admin", "ops-team"]
+    dd_ui_owner: "ops-team"
+    dd_ui_env:
+      CLUSTER_NAME: "prod-proxmox"
+      BACKUP_SCHEDULE: "0 2 * * *"
+      RETENTION_DAYS: "30"
+  hosts:
+    avocado:
+      dd_ui_alt_name: "PVE Node 1"
+      dd_ui_owner: "infrastructure"
+    bamboo:
+      dd_ui_alt_name: "PVE Node 2"
+      dd_ui_owner: "infrastructure"
+  # Nested groups (children)
+  children:
+    storage:
+      vars:
+        dd_ui_description: "Storage nodes for Proxmox"
+        dd_ui_tags: ["storage", "nfs", "ceph"]
+      hosts:
+        storage-01:
+          ansible_host: 10.30.2.10
+          dd_ui_alt_name: "Ceph OSD 1"
+
+# Configuration management group
+ansible:
+  vars:
+    dd_ui_tags: ["automation", "configuration", "infrastructure"]
+    dd_ui_description: "Automation and configuration management nodes"
+    dd_ui_alt_name: "Config Management"
+    dd_ui_tenant: "devops"
+    dd_ui_allowed_users: ["devops-team", "alice"]
+    dd_ui_owner: "devops-team"
+    dd_ui_env:
+      ANSIBLE_VERSION: "2.15"
+      PYTHON_VERSION: "3.11"
+      VAULT_ADDR: "https://vault.internal:8200"
+  hosts:
+    ant-parade:  # Host can be in multiple groups
+    leaf-cutter:
+
+# Docker swarm group
+docker:
+  vars:
+    dd_ui_tags: ["docker", "containerization", "swarm"]
+    dd_ui_description: "Docker Swarm cluster nodes"
+    dd_ui_tenant: "platform"
+    dd_ui_env:
+      DOCKER_VERSION: "24.0.7"
+      SWARM_MODE: "active"
+      REGISTRY_URL: "registry.internal:5000"
+  hosts:
+    anchorage:
+    dock:
+      ansible_host: 10.55.6.136
+      dd_ui_tags: ["gpu", "dev", "testing"]
+      dd_ui_description: "Development Docker host with GPU"
+    harbormaster:
+      ansible_host: 10.24.7.55
+      dd_ui_tags: ["management", "infra"]
+      dd_ui_alt_name: "Swarm Manager"
+
+# Database servers group
+databases:
+  vars:
+    dd_ui_tags: ["database", "postgresql", "critical"]
+    dd_ui_description: "Database servers"
+    dd_ui_owner: "dba-team"
+    dd_ui_env:
+      POSTGRES_VERSION: "15"
+      BACKUP_ENABLED: "true"
+      REPLICATION_MODE: "streaming"
+  children:
+    postgres_primary:
+      vars:
+        dd_ui_tags: ["primary", "write"]
+      hosts:
+        pg-primary:
+          ansible_host: 10.30.3.10
+    postgres_replicas:
+      vars:
+        dd_ui_tags: ["replica", "read"]
+      hosts:
+        pg-replica-1:
+          ansible_host: 10.30.3.11
+        pg-replica-2:
+          ansible_host: 10.30.3.12

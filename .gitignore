@@ -301,3 +301,10 @@ id_ed25519.pub
 
 # === Local development ===
 .local/
+# === Local-only / never published ===
+/CLAUDE.md
+/docs/internal/
+
+# StageFreight tool artifacts (badges are committed separately by StageFreight)
+/.stagefreight/*
+!/.stagefreight/badges/
