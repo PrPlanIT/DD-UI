@@ -4,7 +4,7 @@
   --color-brand: #74ecbe;
 }
 
-:root { 
+:root {
   color-scheme: dark;
   --font-mono: Monofur, ui-monospace, SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
   --font-sans: Monofur, ui-sans-serif, system-ui, sans-serif;

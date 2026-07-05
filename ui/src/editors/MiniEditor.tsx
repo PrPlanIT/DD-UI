@@ -55,10 +55,10 @@ export default function MiniEditor({
   // Fullscreen
   const [fullscreen, setFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  
+
   // Tab detection
   const hasTabs = useMemo(() => content.includes('\t'), [content]);
-  
+
   // Windows line ending detection
   const hasWindowsLineEndings = useMemo(() => content.includes('\r\n'), [content]);
 
@@ -227,13 +227,13 @@ export default function MiniEditor({
   function toggleFullscreen() {
     setFullscreen((f) => !f);
   }
-  
+
   // Convert tabs to spaces
   function convertTabsToSpaces() {
     const converted = content.replace(/\t/g, '  '); // Replace tabs with 2 spaces
     setContent(converted);
   }
-  
+
   // Convert Windows line endings to Unix
   function convertToUnixLineEndings() {
     const converted = content.replace(/\r\n/g, '\n'); // Replace CRLF with LF
@@ -300,7 +300,7 @@ export default function MiniEditor({
               className="flex-1"
             />
           </div>
-          
+
           {hasTabs && (
             <div className="flex items-center gap-2 p-2 bg-yellow-900/30 border border-yellow-700 rounded text-sm">
               <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0" />
@@ -317,7 +317,7 @@ export default function MiniEditor({
               </Button>
             </div>
           )}
-          
+
           {hasWindowsLineEndings && (
             <div className="flex items-center gap-2 p-2 bg-orange-900/30 border border-orange-700 rounded text-sm">
               <AlertTriangle className="h-4 w-4 text-orange-500 shrink-0" />

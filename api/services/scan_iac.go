@@ -340,7 +340,7 @@ func toString(v any) string {
 		return fmt.Sprint(v)
 	}
 }
-func normLabels(v any) map[string]string { /* unchanged */ 
+func normLabels(v any) map[string]string { /* unchanged */
 	out := map[string]string{}
 	switch t := v.(type) {
 	case map[string]any:
@@ -361,7 +361,7 @@ func normLabels(v any) map[string]string { /* unchanged */
 	}
 	return out
 }
-func normEnv(env any, envFile any, stackDir string, discovered []envFileMeta) ([]string, []IacEnvFile) { /* unchanged */ 
+func normEnv(env any, envFile any, stackDir string, discovered []envFileMeta) ([]string, []IacEnvFile) { /* unchanged */
 	keys := map[string]struct{}{}
 	switch t := env.(type) {
 	case map[string]any:
@@ -409,7 +409,7 @@ func normEnv(env any, envFile any, stackDir string, discovered []envFileMeta) ([
 	sort.Strings(out)
 	return out, files
 }
-func normPorts(v any) []map[string]any { /* unchanged */ 
+func normPorts(v any) []map[string]any { /* unchanged */
 	out := []map[string]any{}
 	switch t := v.(type) {
 	case []any:
@@ -433,7 +433,7 @@ func normPorts(v any) []map[string]any { /* unchanged */
 	}
 	return out
 }
-func splitPortString(s string) (host, cont, proto string) { /* unchanged */ 
+func splitPortString(s string) (host, cont, proto string) { /* unchanged */
 	proto = "tcp"
 	if i := strings.IndexByte(s, '/'); i > 0 {
 		proto = strings.ToLower(strings.TrimSpace(s[i+1:]))
@@ -444,7 +444,7 @@ func splitPortString(s string) (host, cont, proto string) { /* unchanged */
 	}
 	return "", strings.TrimSpace(s), proto
 }
-func normVolumes(v any) []map[string]any { /* unchanged */ 
+func normVolumes(v any) []map[string]any { /* unchanged */
 	out := []map[string]any{}
 	switch t := v.(type) {
 	case []any:
@@ -468,7 +468,7 @@ func normVolumes(v any) []map[string]any { /* unchanged */
 	}
 	return out
 }
-func splitVolString(s string) (src, dst, mode string) { /* unchanged */ 
+func splitVolString(s string) (src, dst, mode string) { /* unchanged */
 	mode = ""
 	parts := strings.Split(s, ":")
 	if len(parts) == 3 {
@@ -486,17 +486,17 @@ func directoryHasIacContent(dir, composeFile string, envFiles []envFileMeta) boo
 	if composeFile != "" {
 		return true
 	}
-	
+
 	// Has environment files
 	if len(envFiles) > 0 {
 		return true
 	}
-	
+
 	// Has deployment scripts
 	if existsAny(dir, []string{"deploy.sh", "pre.sh", "post.sh"}) {
 		return true
 	}
-	
+
 	// Directory is empty or contains no IaC-relevant files
 	return false
 }

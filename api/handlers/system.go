@@ -74,7 +74,7 @@ func SetupSystemRoutes(router chi.Router) {
 	// Debug endpoint for migration status
 	router.Get("/debug/migrations", func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		
+
 		// Check migration version
 		var currentVersion int
 		err := common.DB.QueryRow(ctx, "SELECT COALESCE(MAX(version), 0) FROM schema_migrations").Scan(&currentVersion)
@@ -82,13 +82,13 @@ func SetupSystemRoutes(router chi.Router) {
 			http.Error(w, "Failed to get migration version: " + err.Error(), http.StatusInternalServerError)
 			return
 		}
-		
+
 		// Check if groups table exists
 		var groupsExists bool
 		err = common.DB.QueryRow(ctx, `
 			SELECT EXISTS (
-				SELECT FROM information_schema.tables 
-				WHERE table_schema = 'public' 
+				SELECT FROM information_schema.tables
+				WHERE table_schema = 'public'
 				AND table_name = 'groups'
 			)
 		`).Scan(&groupsExists)
@@ -96,13 +96,13 @@ func SetupSystemRoutes(router chi.Router) {
 			http.Error(w, "Failed to check groups table: " + err.Error(), http.StatusInternalServerError)
 			return
 		}
-		
+
 		// Check if host_groups table exists
 		var hostGroupsExists bool
 		err = common.DB.QueryRow(ctx, `
 			SELECT EXISTS (
-				SELECT FROM information_schema.tables 
-				WHERE table_schema = 'public' 
+				SELECT FROM information_schema.tables
+				WHERE table_schema = 'public'
 				AND table_name = 'host_groups'
 			)
 		`).Scan(&hostGroupsExists)
@@ -110,7 +110,7 @@ func SetupSystemRoutes(router chi.Router) {
 			http.Error(w, "Failed to check host_groups table: " + err.Error(), http.StatusInternalServerError)
 			return
 		}
-		
+
 		// Get list of applied migrations
 		rows, err := common.DB.Query(ctx, "SELECT version, applied_at FROM schema_migrations ORDER BY version")
 		if err != nil {
@@ -118,12 +118,12 @@ func SetupSystemRoutes(router chi.Router) {
 			return
 		}
 		defer rows.Close()
-		
+
 		type Migration struct {
 			Version   int       `json:"version"`
 			AppliedAt time.Time `json:"applied_at"`
 		}
-		
+
 		var migrations []Migration
 		for rows.Next() {
 			var m Migration
@@ -132,14 +132,14 @@ func SetupSystemRoutes(router chi.Router) {
 			}
 			migrations = append(migrations, m)
 		}
-		
+
 		result := map[string]interface{}{
 			"current_version": currentVersion,
 			"groups_table_exists": groupsExists,
 			"host_groups_table_exists": hostGroupsExists,
 			"applied_migrations": migrations,
 		}
-		
+
 		writeJSON(w, http.StatusOK, result)
 	})
 
@@ -190,7 +190,7 @@ func SetupSystemRoutes(router chi.Router) {
 					continue
 				}
 			}
-			
+
 			// Convert to API format
 			filtered = append(filtered, map[string]interface{}{
 				"name":          h.Name,
@@ -207,7 +207,7 @@ func SetupSystemRoutes(router chi.Router) {
 				"labels":        map[string]string{}, // For compatibility
 			})
 		}
-		
+
 		// Apply pagination
 		lo := offset
 		if lo > len(filtered) {
@@ -240,18 +240,18 @@ func SetupSystemRoutes(router chi.Router) {
 			AllowedUsers []string          `json:"allowed_users"`
 			Env          map[string]string `json:"env"`
 		}
-		
+
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		
+
 		// Validate required fields
 		if req.Name == "" || req.Addr == "" {
 			http.Error(w, "Host name and addr (IP/FQDN) are required", http.StatusBadRequest)
 			return
 		}
-		
+
 		// Build metadata
 		metadata := services.HostMetadata{
 			Tags:         req.Tags,
@@ -262,7 +262,7 @@ func SetupSystemRoutes(router chi.Router) {
 			Owner:        req.Owner,
 			Env:          req.Env,
 		}
-		
+
 		// Create host
 		invMgr := services.GetInventoryManager()
 		if err := invMgr.CreateHost(req.Name, req.Addr, metadata); err != nil {
@@ -273,17 +273,17 @@ func SetupSystemRoutes(router chi.Router) {
 			}
 			return
 		}
-		
+
 		// Return success
 		writeJSON(w, http.StatusCreated, map[string]any{
 			"message": fmt.Sprintf("Host %s created successfully", req.Name),
 			"name":    req.Name,
 		})
 	})
-	
+
 	router.Put("/iac/hosts/{name}", func(w http.ResponseWriter, r *http.Request) {
 		hostName := chi.URLParam(r, "name")
-		
+
 		var req struct {
 			Addr         string            `json:"addr"` // ansible_host
 			Description  string            `json:"description"`
@@ -294,12 +294,12 @@ func SetupSystemRoutes(router chi.Router) {
 			AllowedUsers []string          `json:"allowed_users"`
 			Env          map[string]string `json:"env"`
 		}
-		
+
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		
+
 		// Build metadata
 		metadata := services.HostMetadata{
 			Tags:         req.Tags,
@@ -310,7 +310,7 @@ func SetupSystemRoutes(router chi.Router) {
 			Owner:        req.Owner,
 			Env:          req.Env,
 		}
-		
+
 		// Update host
 		invMgr := services.GetInventoryManager()
 		if err := invMgr.UpdateHost(hostName, req.Addr, metadata); err != nil {
@@ -321,17 +321,17 @@ func SetupSystemRoutes(router chi.Router) {
 			}
 			return
 		}
-		
+
 		// Return success
 		writeJSON(w, http.StatusOK, map[string]any{
 			"message": fmt.Sprintf("Host %s updated successfully", hostName),
 			"name":    hostName,
 		})
 	})
-	
+
 	router.Delete("/iac/hosts/{name}", func(w http.ResponseWriter, r *http.Request) {
 		hostName := chi.URLParam(r, "name")
-		
+
 		// Delete host
 		invMgr := services.GetInventoryManager()
 		if err := invMgr.DeleteHost(hostName); err != nil {
@@ -342,7 +342,7 @@ func SetupSystemRoutes(router chi.Router) {
 			}
 			return
 		}
-		
+
 		// Return success
 		writeJSON(w, http.StatusOK, map[string]any{
 			"message": fmt.Sprintf("Host %s deleted successfully", hostName),
@@ -390,7 +390,7 @@ func SetupSystemRoutes(router chi.Router) {
 			http.Error(w, "Failed to get hosts from inventory: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		
+
 		// Convert inventory hosts to database format for compatibility
 		// TODO: Eventually update services to use inventory hosts directly
 		hostRows := make([]database.HostRow, 0, len(invHosts))
@@ -503,7 +503,7 @@ func SetupSystemRoutes(router chi.Router) {
 		viewBoostTracker.AddView(hostName)
 		writeJSON(w, http.StatusOK, map[string]any{"status": "view_started", "host": hostName})
 	})
-	
+
 	router.Post("/view/hosts/{name}/end", func(w http.ResponseWriter, r *http.Request) {
 		hostName := chi.URLParam(r, "name")
 		viewBoostTracker.RemoveView(hostName)

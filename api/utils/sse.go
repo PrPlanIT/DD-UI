@@ -74,7 +74,7 @@ var WSUpgrader = websocket.Upgrader{
 		// allow same-origin and configured UI origin
 		origin := strings.TrimSpace(r.Header.Get("Origin"))
 		ui := strings.TrimSpace(common.Env("DD_UI_UI_ORIGIN", ""))
-		
+
 		if origin == "" || origin == ui {
 			return true
 		}
@@ -83,7 +83,7 @@ var WSUpgrader = websocket.Upgrader{
 		   strings.HasPrefix(origin, "https://localhost:") || strings.HasPrefix(origin, "https://127.0.0.1:") {
 			return true
 		}
-		
+
 		return false
 	},
 }

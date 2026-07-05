@@ -123,19 +123,19 @@ func renderComposeServices(ctx context.Context, stageDir, projectName string, fi
 	envFiles := make(map[string]map[string]string) // filename -> key-value pairs
 	var rootEnv map[string]string                  // .env file variables
 	var composeFiles []string
-	
+
 	entries, err := os.ReadDir(stageDir)
 	if err != nil {
 		return nil, fmt.Errorf("read stage dir: %v", err)
 	}
-	
+
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
 		}
-		
+
 		sourcePath := filepath.Join(stageDir, entry.Name())
-		
+
 		if strings.HasSuffix(entry.Name(), ".env") {
 			// Files in stageDir are already decrypted - read as plain text
 			rawContent, err := os.ReadFile(sourcePath)
@@ -147,7 +147,7 @@ func renderComposeServices(ctx context.Context, stageDir, projectName string, fi
 			content := filterDotenvSopsKeys(rawContent)
 			envVars := parseEnvFileContent(content)
 			envFiles[entry.Name()] = envVars
-			
+
 			// Check if this is the root .env file
 			if entry.Name() == ".env" {
 				rootEnv = envVars
@@ -155,7 +155,7 @@ func renderComposeServices(ctx context.Context, stageDir, projectName string, fi
 			} else {
 				common.DebugLog("Parsed env file %s with %d variables (already decrypted in staging)", entry.Name(), len(envVars))
 			}
-			
+
 			// Write env file to temp directory
 			destPath := filepath.Join(tempDir, entry.Name())
 			if err := os.WriteFile(destPath, content, 0644); err != nil {
@@ -169,7 +169,7 @@ func renderComposeServices(ctx context.Context, stageDir, projectName string, fi
 				continue // Skip problematic compose files
 			}
 			common.DebugLog("Processed compose file %s (already decrypted in staging)", entry.Name())
-			
+
 			// Write compose file to temp directory
 			destPath := filepath.Join(tempDir, entry.Name())
 			if err := os.WriteFile(destPath, content, 0644); err != nil {
@@ -205,7 +205,7 @@ func renderComposeServices(ctx context.Context, stageDir, projectName string, fi
 	cmd := exec.CommandContext(ctx, "docker", args...)
 	cmd.Dir = tempDir
 	out, err := cmd.CombinedOutput()
-	
+
 	if err == nil {
 		// Docker compose config succeeded - use its output
 		var payload struct {
@@ -229,9 +229,9 @@ func renderComposeServices(ctx context.Context, stageDir, projectName string, fi
 			return rs, nil
 		}
 	}
-	
+
 	common.DebugLog("Docker compose config failed or parsing failed: %v, using manual parsing", err)
-	
+
 	// Step 3: Manual parsing with proper variable resolution
 	return parseComposeWithVariableResolution(ctx, tempDir, composeFiles, rootEnv, envFiles)
 }
@@ -239,16 +239,16 @@ func renderComposeServices(ctx context.Context, stageDir, projectName string, fi
 // parseComposeWithVariableResolution manually parses compose files with proper variable resolution
 func parseComposeWithVariableResolution(ctx context.Context, tempDir string, composeFiles []string, rootEnv map[string]string, envFiles map[string]map[string]string) ([]common.RenderedService, error) {
 	common.DebugLog("Using manual compose parsing with variable resolution")
-	
+
 	var rs []common.RenderedService
-	
+
 	for _, filename := range composeFiles {
 		content, err := os.ReadFile(filepath.Join(tempDir, filename))
 		if err != nil {
 			common.DebugLog("Failed to read compose file %s: %v", filename, err)
 			continue
 		}
-		
+
 		// Parse the compose file structure
 		var compose struct {
 			Services map[string]struct {
@@ -258,7 +258,7 @@ func parseComposeWithVariableResolution(ctx context.Context, tempDir string, com
 				EnvFile     []string          `json:"env_file" yaml:"env_file"`
 			} `json:"services" yaml:"services"`
 		}
-		
+
 		// Try JSON first, then YAML
 		if err := json.Unmarshal(content, &compose); err != nil {
 			// Try YAML parsing
@@ -270,11 +270,11 @@ func parseComposeWithVariableResolution(ctx context.Context, tempDir string, com
 		} else {
 			common.DebugLog("Successfully parsed %s as JSON", filename)
 		}
-		
+
 		for serviceName, service := range compose.Services {
 			// Parse service-level environment variables
 			serviceEnv := parseServiceEnvironment(service.Environment)
-			
+
 			// Collect service-specific env files in order
 			var serviceEnvFiles []map[string]string
 			for _, envFileName := range service.EnvFile {
@@ -282,21 +282,21 @@ func parseComposeWithVariableResolution(ctx context.Context, tempDir string, com
 					serviceEnvFiles = append(serviceEnvFiles, envMap)
 				}
 			}
-			
+
 			// Resolve variables using Docker Compose precedence
 			common.DebugLog("Resolving variables for service %s", serviceName)
 			common.DebugLog("  Original image: %s", service.Image)
 			common.DebugLog("  Original container_name: %s", service.ContainerName)
-			
+
 			image := resolveVariablesWithPrecedence(service.Image, rootEnv, serviceEnv, serviceEnvFiles)
 			containerName := resolveVariablesWithPrecedence(service.ContainerName, rootEnv, serviceEnv, serviceEnvFiles)
 			if containerName == "" {
 				containerName = serviceName // Default container name is service name
 			}
-			
+
 			common.DebugLog("  Resolved image: %s", image)
 			common.DebugLog("  Resolved container_name: %s", containerName)
-			
+
 			rs = append(rs, common.RenderedService{
 				ServiceName:   serviceName,
 				ContainerName: strings.TrimSpace(containerName),
@@ -305,7 +305,7 @@ func parseComposeWithVariableResolution(ctx context.Context, tempDir string, com
 			common.DebugLog("Manual parsed service %s: image=%s, container=%s", serviceName, image, containerName)
 		}
 	}
-	
+
 	sort.Slice(rs, func(i, j int) bool { return rs[i].ServiceName < rs[j].ServiceName })
 	return rs, nil
 }
@@ -337,14 +337,14 @@ func parseServiceEnvironment(env []interface{}) map[string]string {
 
 // resolveVariablesWithPrecedence resolves Docker Compose variables following official precedence:
 // 1. Root .env file (project-level environment file interpolation)
-// 2. Service-level environment: variables  
+// 2. Service-level environment: variables
 // 3. Service-specific env_file: files (in order they appear)
 // 4. Default values from ${VAR:-default} syntax
 func resolveVariablesWithPrecedence(input string, rootEnv, serviceEnv map[string]string, serviceEnvFiles []map[string]string) string {
 	if input == "" {
 		return input
 	}
-	
+
 	result := input
 	for {
 		start := strings.Index(result, "${")
@@ -356,20 +356,20 @@ func resolveVariablesWithPrecedence(input string, rootEnv, serviceEnv map[string
 			break
 		}
 		end += start
-		
+
 		varExpr := result[start+2 : end]
 		var varName, defaultVal string
-		
+
 		if idx := strings.Index(varExpr, ":-"); idx > 0 {
 			varName = varExpr[:idx]
 			defaultVal = varExpr[idx+2:]
 		} else {
 			varName = varExpr
 		}
-		
+
 		var value string
 		var source string
-		
+
 		// 1. Root .env file (project-level, highest priority)
 		if rootEnv != nil {
 			if v, exists := rootEnv[varName]; exists {
@@ -377,7 +377,7 @@ func resolveVariablesWithPrecedence(input string, rootEnv, serviceEnv map[string
 				source = "root .env"
 			}
 		}
-		
+
 		// 2. Service-level environment: variables
 		if value == "" && serviceEnv != nil {
 			if v, exists := serviceEnv[varName]; exists {
@@ -385,7 +385,7 @@ func resolveVariablesWithPrecedence(input string, rootEnv, serviceEnv map[string
 				source = "service environment"
 			}
 		}
-		
+
 		// 3. Service-specific env_file: files (in order they appear)
 		if value == "" {
 			for i, envFile := range serviceEnvFiles {
@@ -396,7 +396,7 @@ func resolveVariablesWithPrecedence(input string, rootEnv, serviceEnv map[string
 				}
 			}
 		}
-		
+
 		// 4. Default values from ${VAR:-default} syntax (lowest priority)
 		if value == "" {
 			value = defaultVal
@@ -404,16 +404,16 @@ func resolveVariablesWithPrecedence(input string, rootEnv, serviceEnv map[string
 				source = "default value"
 			}
 		}
-		
+
 		if source != "" {
 			common.DebugLog("Resolved %s=%s from %s", varName, value, source)
 		} else if value == "" {
 			common.DebugLog("Variable %s not found in any source, leaving unresolved", varName)
 		}
-		
+
 		result = result[:start] + value + result[end+1:]
 	}
-	
+
 	return result
 }
 

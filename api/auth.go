@@ -242,10 +242,10 @@ func InitAuthFromEnv() (*scs.SessionManager, error) {
 	} else {
 		sessionManager.Cookie.SameSite = http.SameSiteLaxMode
 	}
-	
+
 	// Also initialize the global SessionManager in common package so handlers can use it
 	common.SessionManager = sessionManager
-	
+
 	infoLog("AUTH: Session manager initialized successfully")
 	infoLog("AUTH: common.SessionManager = %v", common.SessionManager != nil)
 

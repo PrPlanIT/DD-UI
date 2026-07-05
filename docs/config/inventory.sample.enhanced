@@ -19,14 +19,14 @@ all:
         CUDA_VERSION: "11.8"
         GPU_COUNT: "4"
         MODEL_PATH: "/models/production"
-    
+
     # Automation controller with minimal DD-UI fields
     ant-parade:
       ansible_host: 10.30.1.111
       dd_ui_tags: ["automation", "management", "controller"]
       dd_ui_description: "Primary automation controller"
       dd_ui_owner: "devops-team"
-    
+
     # Basic host with no DD-UI metadata (still works fine)
     leaf-cutter:
       ansible_host: 10.13.37.141

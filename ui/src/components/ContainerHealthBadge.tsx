@@ -3,11 +3,11 @@ import { useState, useEffect, useCallback } from "react";
 import { RefreshCw, Loader2, Heart, HeartOff, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { handle401 } from "@/utils/auth";
-import { 
-  Tooltip, 
-  TooltipContent, 
-  TooltipProvider, 
-  TooltipTrigger 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
 } from "@/components/ui/tooltip";
 import { ApiContainer } from "@/types";
 import { debugLog } from "@/utils/logging";
@@ -20,8 +20,8 @@ interface ContainerHealthBadgeProps {
   onStateChange?: (newState: string, newStatus: string, newHealth?: string) => void;
 }
 
-export default function ContainerHealthBadge({ 
-  container: initialContainer, 
+export default function ContainerHealthBadge({
+  container: initialContainer,
   hostName,
   autoRefresh = false,
   refreshInterval = 5000,
@@ -31,10 +31,10 @@ export default function ContainerHealthBadge({
   const [loading, setLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(Date.now());
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(autoRefresh);
-  
+
   const fetchContainerStatus = useCallback(async () => {
     if (loading) return;
-    
+
     setLoading(true);
     try {
       // Fetch single container status
@@ -42,31 +42,31 @@ export default function ContainerHealthBadge({
         `/api/containers/hosts/${encodeURIComponent(hostName)}/${encodeURIComponent(container.name)}`,
         { credentials: "include" }
       );
-      
+
       if (response.status === 401) {
         handle401();
         return;
       }
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch container status: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
       if (data.container) {
         const newContainer = data.container as ApiContainer;
         setContainer(newContainer);
         setLastRefresh(Date.now());
-        
+
         // Notify parent of state change
         if (onStateChange && (
-          newContainer.state !== container.state || 
+          newContainer.state !== container.state ||
           newContainer.status !== container.status ||
           newContainer.health !== container.health
         )) {
           onStateChange(newContainer.state, newContainer.status, newContainer.health);
         }
-        
+
         debugLog(`[ContainerHealthBadge] Updated ${container.name}: state=${newContainer.state}, health=${newContainer.health}`);
       }
     } catch (error) {
@@ -75,31 +75,31 @@ export default function ContainerHealthBadge({
       setLoading(false);
     }
   }, [container.name, container.state, container.status, container.health, hostName, loading, onStateChange]);
-  
+
   // Auto-refresh effect
   useEffect(() => {
     if (!autoRefreshEnabled) return;
-    
+
     const interval = setInterval(() => {
       fetchContainerStatus();
     }, refreshInterval);
-    
+
     return () => clearInterval(interval);
   }, [autoRefreshEnabled, refreshInterval, fetchContainerStatus]);
-  
+
   // Determine health status and colors
   const getHealthInfo = () => {
     const s = (container.state || "").toLowerCase();
     const st = (container.status || "").toLowerCase();
     const h = (container.health || "").toLowerCase();
-    
+
     let color = "text-slate-400";
     let bgColor = "bg-slate-900/40";
     let borderColor = "border-slate-700/60";
     let icon = <Heart className="h-3.5 w-3.5" />;
     let text = "unknown";
     let animate = false;
-    
+
     if (h === "healthy") {
       color = "text-emerald-400";
       bgColor = "bg-emerald-900/40";
@@ -143,7 +143,7 @@ export default function ContainerHealthBadge({
       bgColor = "bg-rose-900/40";
       borderColor = "border-rose-700/60";
       icon = <HeartOff className="h-3.5 w-3.5" />;
-      
+
       // Extract exit code if available
       const exitMatch = st.match(/exited\s*\((\d+)\)/i);
       if (exitMatch && exitMatch[1]) {
@@ -166,12 +166,12 @@ export default function ContainerHealthBadge({
       text = "removing";
       animate = true;
     }
-    
+
     return { color, bgColor, borderColor, icon, text, animate };
   };
-  
+
   const { color, bgColor, borderColor, icon, text, animate } = getHealthInfo();
-  
+
   return (
     <div className="inline-flex items-center gap-1.5">
       {/* Health Badge */}
@@ -187,7 +187,7 @@ export default function ContainerHealthBadge({
         )}
         <span>{text}</span>
       </div>
-      
+
       {/* Refresh Button */}
       <TooltipProvider>
         <Tooltip>
@@ -220,7 +220,7 @@ export default function ContainerHealthBadge({
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      
+
       {/* Auto-refresh Toggle */}
       <TooltipProvider>
         <Tooltip>

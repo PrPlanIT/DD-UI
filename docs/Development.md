@@ -15,7 +15,7 @@ Set `DATABASE_URL` for the backend:
 export DATABASE_URL=postgres://dd-ui:devpass@localhost:5432/dd-ui?sslmode=disable
 ```
 
-2) **OIDC (Zitadel example)**  
+2) **OIDC (Zitadel example)**
 Create an OAuth 2.0 Web client:
 - Redirect URL: `https://your-dd-ui.example.com/auth/callback` (or `http://localhost:8080/auth/callback` for dev)
 - (Optional) Post-logout redirect: `http://localhost:8080/`
@@ -49,7 +49,7 @@ cd ui
 pnpm install
 pnpm dev
 ```
-Visit `http://localhost:5173` (or the port Vite prints).  
+Visit `http://localhost:5173` (or the port Vite prints).
 In production, the Go server serves the built UI; during dev it’s fine to run separately.
 
 Build the UI once:

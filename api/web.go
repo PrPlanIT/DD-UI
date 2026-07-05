@@ -28,7 +28,7 @@ func normalizeFileContent(content string) string {
 	// Normalize line endings: convert \r\n to \n and remove standalone \r
 	normalized := strings.ReplaceAll(content, "\r\n", "\n")
 	normalized = strings.ReplaceAll(normalized, "\r", "\n")
-	
+
 	// Don't add extra trailing newlines - preserve original behavior
 	return normalized
 }
@@ -149,7 +149,7 @@ func makeRouter() http.Handler {
 
 			handlers.SetupIacRoutes(priv)
 
-			// Docker operations routes (organized in routes/docker.go) 
+			// Docker operations routes (organized in routes/docker.go)
 			handlers.SetupDockerRoutes(priv)
 
 			// Docker cleanup endpoints (organized in routes/cleanup.go)
@@ -157,19 +157,19 @@ func makeRouter() http.Handler {
 
 			// System management routes (organized in routes/system.go)
 			handlers.SetupSystemRoutes(priv)
-			
+
 			// Logging routes (organized in handlers/logs_routes.go)
 			handlers.SetupLoggingRoutes(priv)
 
 			// SSH operation routes (organized in routes/ssh.go)
 			handlers.SetupSshRoutes(priv)
-			
+
 			// DevOps automation routes (organized in handlers/devops.go)
 			handlers.SetupDevopsRoutes(priv)
-			
+
 			// Git sync routes (organized in handlers/git_routes.go)
 			handlers.SetupGitSyncRoutes(priv)
-			
+
 			// Groups management routes (organized in handlers/groups.go)
 			handlers.SetupGroupRoutes(priv)
 		})
@@ -419,18 +419,18 @@ func cleanupEmptyDirs(path, root string) error {
 	if path == root || path == "" || path == "/" {
 		return nil
 	}
-	
+
 	dir := filepath.Dir(path)
 	if dir == path || dir == root {
 		return nil
 	}
-	
+
 	// Check if directory is empty
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil // Directory might not exist, ignore
 	}
-	
+
 	if len(entries) == 0 {
 		common.DebugLog("cleanupEmptyDirs: removing empty dir %s", dir)
 		if err := os.Remove(dir); err != nil {
@@ -439,7 +439,7 @@ func cleanupEmptyDirs(path, root string) error {
 		// Recursively check parent directories
 		return cleanupEmptyDirs(dir, root)
 	}
-	
+
 	return nil
 }
 
@@ -459,25 +459,25 @@ func cleanupEmptyStackAfterFileDeletion(ctx context.Context, stackID int64, root
 	if err != nil {
 		return err
 	}
-	
+
 	if !hasContent {
 		common.DebugLog("cleanupEmptyStackAfterFileDeletion: removing empty stack id=%d", stackID)
 		// Get stack path for directory cleanup
 		var relPath string
 		_ = common.DB.QueryRow(ctx, `SELECT rel_path FROM iac_stacks WHERE id=$1`, stackID).Scan(&relPath)
-		
+
 		// Delete the stack from database
 		_, err := common.DB.Exec(ctx, `DELETE FROM iac_stacks WHERE id=$1`, stackID)
 		if err != nil {
 			return err
 		}
-		
+
 		// Clean up empty directories
 		if relPath != "" {
 			stackDir := filepath.Join(root, relPath)
 			return cleanupEmptyDirs(stackDir, root)
 		}
 	}
-	
+
 	return nil
 }

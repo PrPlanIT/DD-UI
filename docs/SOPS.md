@@ -19,14 +19,14 @@ SOPS_AGE_KEY_FILE=/run/secrets/sops_age_key
 ### Choose encrypt recipients
 To encrypt, SOPS needs one or more **AGE recipients** (public keys). You have two main options:
 
-1. **Environment variable (no repo config required)**  
+1. **Environment variable (no repo config required)**
    Set `SOPS_AGE_RECIPIENTS` with one or more recipients (space-separated):
    ```
    SOPS_AGE_RECIPIENTS="age1teamUser1... age1teamUser2... age1ciKey..."
    ```
    DD-UI will pass each recipient to `sops` as `--age <recipient>` during encryption.
 
-2. **`.sops.yaml` in your repo**  
+2. **`.sops.yaml` in your repo**
    Store creation rules in the repo so `sops` knows what to use per path:
    ```yaml
    # /data/.sops.yaml

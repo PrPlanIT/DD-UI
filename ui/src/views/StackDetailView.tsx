@@ -141,7 +141,7 @@ function PortsBlock({ ports }: { ports?: any[] }) {
         const target = p.PrivatePort || p.target || "";
         const protocol = p.Type || p.protocol || "tcp";
         const ip = p.IP || "";
-        
+
         return (
           <div key={i} className="text-slate-300">
             {ip && ip !== "0.0.0.0" && ip !== "::" ? `${ip}:` : ""}
@@ -168,7 +168,7 @@ function VolsBlock({ vols, mounts }: { vols?: InspectOut["volumes"]; mounts?: an
         const target = m.Destination || m.target || "";
         const mode = m.Mode || m.mode || "";
         const rw = m.RW !== undefined ? m.RW : m.rw;
-        
+
         return (
           <div key={i} className={`grid grid-cols-3 gap-3 items-center px-2 py-1.5 rounded ${zebra}`}>
             <div className="text-slate-300 text-sm font-mono truncate" title={source}>{source}</div>
@@ -201,7 +201,7 @@ function normalizeNetworks(c: InspectOut): NetRow[] {
   if (Array.isArray(c.networks)) {
     return (c.networks as string[]).map((name) => ({ name }));
   }
-  
+
   return [];
 }
 
@@ -450,50 +450,50 @@ export default function StackDetailView({
       const contJson = await rc.json();
       const runtimeAll: ApiContainer[] = (contJson.containers || []) as ApiContainer[];
       debugLog(`=== CONTAINER API DEBUG ===`);
-      debugLog(`Container API response for host ${host.name}:`, { 
-        status: rc.status, 
-        totalContainers: runtimeAll.length, 
+      debugLog(`Container API response for host ${host.name}:`, {
+        status: rc.status,
+        totalContainers: runtimeAll.length,
         rawResponse: contJson,
-        containers: runtimeAll.map(c => ({ 
-          name: c.name, 
-          compose_project: c.compose_project, 
+        containers: runtimeAll.map(c => ({
+          name: c.name,
+          compose_project: c.compose_project,
           stack: c.stack,
           hasComposeProject: !!c.compose_project,
           hasStack: !!c.stack
         }))
       });
-      
+
       // Use sanitized stack name to match Docker Compose project labels (same logic as backend)
       const sanitizedStackName = stackName.toLowerCase().replace(/[^a-z0-9_-]/g, '_').replace(/^[_-]+|[_-]+$/g, '') || 'default';
       debugLog(`Filtering containers for stack "${stackName}":`, { stackName, sanitizedStackName });
-      
+
       const my = runtimeAll.filter(c => {
         const project = c.compose_project || c.stack || "(none)";
-        
+
         // Primary matching: exact stack name or sanitized stack name
         const projectMatches = project === stackName || project === sanitizedStackName;
-        
+
         // Secondary matching: for unmanaged stacks, check if container name suggests it belongs to this stack
         // This handles cases where containers exist but don't have compose_project set
         const nameMatches = !c.compose_project && (
-          c.name.startsWith(stackName + '-') || 
+          c.name.startsWith(stackName + '-') ||
           c.name.startsWith(stackName + '_') ||
           c.name.includes(stackName)
         );
-        
+
         const matches = projectMatches || nameMatches;
-        
+
         debugLog(`Container "${c.name}": compose_project="${c.compose_project}", stack="${c.stack}", project="${project}", projectMatches=${projectMatches}, nameMatches=${nameMatches}, matches=${matches}`);
-        
+
         return matches;
       });
-      
+
       debugLog(`=== FILTERING RESULT ===`);
-      debugLog(`Found ${my.length} containers for stack "${stackName}":`, my.map(c => ({ 
-        name: c.name, 
+      debugLog(`Found ${my.length} containers for stack "${stackName}":`, my.map(c => ({
+        name: c.name,
         project: c.compose_project || c.stack || "(none)",
         compose_project: c.compose_project,
-        stack: c.stack 
+        stack: c.stack
       })));
       debugLog(`=== END CONTAINER DEBUG ===`);
       setRuntime(my);
@@ -502,7 +502,7 @@ export default function StackDetailView({
       if (watching && deployResult?.message === "Deployment initiated...") {
         const runningContainers = my.filter(c => c.state === "running").length;
         const totalContainers = my.length;
-        
+
         // More relaxed completion detection - just wait for containers to stabilize
         if (totalContainers > 0) {
           // If all containers are running, it's a success
@@ -513,11 +513,11 @@ export default function StackDetailView({
           else if (runningContainers < totalContainers) {
             const failedCount = totalContainers - runningContainers;
             const stoppedContainers = my.filter(c => c.state === "exited" || c.state === "stopped").length;
-            
+
             if (stoppedContainers > 0) {
-              setDeployResult({ 
-                success: false, 
-                message: `❌ Deployment failed - ${failedCount} container(s) stopped/failed` 
+              setDeployResult({
+                success: false,
+                message: `❌ Deployment failed - ${failedCount} container(s) stopped/failed`
               });
             } else {
               // Still starting up, keep the "started..." message
@@ -526,9 +526,9 @@ export default function StackDetailView({
         }
         // If no containers found, might be an issue
         else if (totalContainers === 0) {
-          setDeployResult({ 
-            success: false, 
-            message: "⚠️ No containers found after deployment - check logs" 
+          setDeployResult({
+            success: false,
+            message: "⚠️ No containers found after deployment - check logs"
           });
         }
       }
@@ -588,7 +588,7 @@ export default function StackDetailView({
     // The stack is identified by host.name + stackName combination
     const r = await fetch(`/api/iac/scopes/${encodeURIComponent(host.name)}/stacks`, {
       method: "POST",
-      credentials: "include", 
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ stack_name: stackName, iac_enabled: false }),
     });
@@ -622,7 +622,7 @@ export default function StackDetailView({
       // Skip detailed inspection for rapid polls, only do it every 3rd tick to reduce API load
       const skipInspect = tickCount % 3 !== 0;
       await refreshRuntime(skipInspect);
-      
+
       if (Date.now() < watchUntil.current) {
         watchTimer.current = window.setTimeout(tick, intervalMs);
       } else {
@@ -656,59 +656,59 @@ export default function StackDetailView({
 
   async function deployNow(forceDeployment: boolean = false) {
     if (files.length === 0) { alert("This stack has no files to deploy. Add a compose file or scripts first."); return; }
-    
+
     setDeploying(true);
     setDeployResult(null);
-    
+
     try {
       // Start streaming deployment
       setDeployResult({ success: true, message: "⏳ Starting deployment..." });
-      
+
       // Build the deployment URL with force parameter if needed
       let deployUrl = `/api/iac/scopes/${encodeURIComponent(host.name)}/stacks/${encodeURIComponent(stackName)}/deploy-stream`;
       if (forceDeployment) {
         deployUrl += "?force=true";
       }
-      
+
       const response = await fetch(deployUrl, {
         method: "GET",
         credentials: "include"
       });
-      
+
       if (response.status === 401) {
         handle401();
         return;
       }
-      
+
       if (!response.ok) {
         throw new Error(`Deploy stream failed: ${response.status} ${response.statusText}`);
       }
-      
+
       if (!response.body) {
         throw new Error("No response body for streaming");
       }
-      
+
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
       let deploymentCompleted = false;
       let deploymentError = false;
-      
+
       try {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          
+
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
           buffer = lines.pop() || ''; // Keep incomplete line in buffer
-          
+
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               try {
                 const eventData = JSON.parse(line.substring(6));
                 debugLog('Stream event:', eventData);
-                
+
                 switch (eventData.type) {
                   case 'info':
                     setDeployResult({ success: true, message: `⏳ ${eventData.message}` });
@@ -735,9 +735,9 @@ export default function StackDetailView({
                     // Configuration unchanged - show confirmation dialog
                     reader.releaseLock(); // Release the reader before showing dialog
                     setDeploying(false);
-                    
+
                     // Parse the additional data from the event (fields are directly on eventData, not nested)
-                    const lastDeployTime = eventData.last_deploy_time ? 
+                    const lastDeployTime = eventData.last_deploy_time ?
                       new Date(eventData.last_deploy_time).toLocaleString('en-US', {
                         month: 'short',
                         day: 'numeric',
@@ -745,10 +745,10 @@ export default function StackDetailView({
                         hour: 'numeric',
                         minute: '2-digit',
                         hour12: true
-                      }) : 
+                      }) :
                       'unknown';
                     const lastDeployStatus = eventData.last_deploy_status || 'unknown';
-                    
+
                     setConfirmDialog({
                       isOpen: true,
                       title: 'Configuration Unchanged',
@@ -770,17 +770,17 @@ export default function StackDetailView({
             }
           }
         }
-        
+
         // Check if deployment completed properly
         if (!deploymentCompleted && !deploymentError) {
           debugLog('Stream ended without completion or error event');
           setDeployResult({ success: false, message: "❌ Deployment stream ended unexpectedly" });
         }
-        
+
       } finally {
         reader.releaseLock();
       }
-      
+
     } catch (e: any) {
       errorLog('Deployment error:', e);
       setDeployResult({ success: false, message: `Deploy failed: ${e?.message || e}` });
@@ -851,9 +851,9 @@ export default function StackDetailView({
             {deployResult.success && watching && (
               <span className="text-sm text-emerald-300">Monitoring containers...</span>
             )}
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setDeployResult(null)}
               className="ml-2 h-6 w-6 p-0 text-slate-400 hover:text-slate-200"
               title="Dismiss"

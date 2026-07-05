@@ -57,12 +57,12 @@ export default function GitSyncView() {
     fetchConfig();
     fetchStatus();
     fetchDevOpsStatus();
-    
+
     // Refresh status every 10 seconds
     const interval = setInterval(() => {
       fetchStatus();
     }, 10000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -71,24 +71,24 @@ export default function GitSyncView() {
       // Add timeout to prevent hanging
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-      
+
       const response = await fetch('/api/git/config', {
         credentials: 'include',
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
       debugLog('Git config response status:', response.status);
       if (response.ok) {
         const data = await response.json();
         debugLog('Git config received:', data);
         setConfig(data);
-        
+
         // Set the IAC root from the sync_path if available
         if (data.sync_path) {
           setIacRoot(data.sync_path);
         }
-        
+
         // When preserving credentials, keep the actual credential values
         // but update all other fields from the server response
         if (preserveCredentials) {
@@ -98,9 +98,9 @@ export default function GitSyncView() {
               auth_token: (typeof prev.auth_token === 'string' ? prev.auth_token : '') || '',
               ssh_key: (typeof prev.ssh_key === 'string' ? prev.ssh_key : '') || '',
             };
-            debugLog('Updated editedConfig after save:', {  ...updated, 
-              auth_token: updated.auth_token ? '***' : '', 
-              ssh_key: updated.ssh_key ? '***' : '' 
+            debugLog('Updated editedConfig after save:', {  ...updated,
+              auth_token: updated.auth_token ? '***' : '',
+              ssh_key: updated.ssh_key ? '***' : ''
             });
             return updated;
           });
@@ -210,12 +210,12 @@ export default function GitSyncView() {
       // Add timeout to prevent hanging
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-      
+
       const response = await fetch('/api/git/status', {
         credentials: 'include',
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
       if (response.ok) {
         const data = await response.json();
@@ -237,15 +237,15 @@ export default function GitSyncView() {
       // Store credentials separately to preserve them
       const currentToken = editedConfig.auth_token;
       // If SSH key field is empty but we have a configured key, use placeholder
-      const currentKey = editedConfig.ssh_key || 
+      const currentKey = editedConfig.ssh_key ||
         (config.has_ssh_key && !editedConfig.ssh_key ? '***UNCHANGED***' : '');
-      
+
       debugLog('Saving config with credentials:', {
         hasToken: !!currentToken,
         hasKey: !!currentKey,
         keyLength: currentKey ? currentKey.length : 0
       });
-      
+
       // Build a clean config object with only the fields the backend expects
       debugLog('Full editedConfig state:', editedConfig);
       debugLog('editedConfig specific fields:', {
@@ -255,7 +255,7 @@ export default function GitSyncView() {
         author_email: editedConfig.commit_author_email,
         sync_path: editedConfig.sync_path,
       });
-      
+
       const configToSave = {
         repo_url: editedConfig.repo_url || '',
         branch: editedConfig.branch || 'main',
@@ -273,35 +273,35 @@ export default function GitSyncView() {
         ...(currentToken && typeof currentToken === 'string' && { auth_token: currentToken }),
         ...(currentKey && typeof currentKey === 'string' && { ssh_key: currentKey }),
       };
-      
-      debugLog('Config being sent to server:', {  ...configToSave, 
-        auth_token: currentToken ? '***' : '', 
-        ssh_key: currentKey ? '***' : '' 
+
+      debugLog('Config being sent to server:', {  ...configToSave,
+        auth_token: currentToken ? '***' : '',
+        ssh_key: currentKey ? '***' : ''
       });
-      
+
       const response = await fetch('/api/git/config', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(configToSave),
       });
-      
+
       if (response.ok) {
         debugLog('Git config saved successfully, updating local state');
-        
+
         // Save the credentials for future use
         setSavedCredentials({
           token: currentToken || '',
           key: currentKey || ''
         });
-        
+
         // Update the config locally with the saved values
         // We don't need to fetch from server since we know what we saved
         setConfig(prev => ({ ...prev, ...configToSave,
           has_token: !!currentToken,
           has_ssh_key: !!currentKey,
         }));
-        
+
         // Keep the credentials in editedConfig
         setEditedConfig(prev => ({ ...configToSave,
           auth_token: currentToken || '',
@@ -309,12 +309,12 @@ export default function GitSyncView() {
           has_token: !!currentToken,
           has_ssh_key: !!currentKey,
         }));
-        
+
         // Fetch status in background (don't await)
         fetchStatus().catch(error => {
           errorLog('Failed to fetch status after save:', error);
         });
-        
+
         setIsSaving(false);
         debugLog('Configuration saved successfully');
       } else {
@@ -332,14 +332,14 @@ export default function GitSyncView() {
   const handleTestConnection = async () => {
     setIsTestingConnection(true);
     setTestResult(null);
-    
+
     try {
       // Only send actual credential strings, not boolean flags
       const testConfig = {
         repo_url: editedConfig.repo_url,
         branch: editedConfig.branch || 'main',
       };
-      
+
       // Only add credentials if they're actual strings
       if (editedConfig.auth_token && typeof editedConfig.auth_token === 'string') {
         testConfig['auth_token'] = editedConfig.auth_token;
@@ -347,16 +347,16 @@ export default function GitSyncView() {
       if (editedConfig.ssh_key && typeof editedConfig.ssh_key === 'string') {
         testConfig['ssh_key'] = editedConfig.ssh_key;
       }
-      
+
       debugLog('Testing connection with config:', { ...testConfig, auth_token: testConfig.auth_token ? '***' : '', ssh_key: testConfig.ssh_key ? '***' : '' });
-      
+
       const response = await fetch('/api/git/test', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(testConfig),
       });
-      
+
       const data = await response.json();
       setTestResult({
         success: response.ok,
@@ -380,17 +380,17 @@ export default function GitSyncView() {
         method: 'POST',
         credentials: 'include',
       });
-      
+
       if (response.status === 401) {
         handle401();
         return;
       }
-      
+
       if (response.ok) {
         const result = await response.json();
         await fetchStatus();
-        setSyncNotification({ 
-          type: 'success', 
+        setSyncNotification({
+          type: 'success',
           message: result.message || 'Repository synchronized successfully',
           operation: 'sync'
         });
@@ -403,8 +403,8 @@ export default function GitSyncView() {
       }
     } catch (error: any) {
       errorLog('Git sync failed:', error);
-      setSyncNotification({ 
-        type: 'error', 
+      setSyncNotification({
+        type: 'error',
         message: error.message || 'Failed to sync with remote repository',
         operation: 'sync'
       });
@@ -422,17 +422,17 @@ export default function GitSyncView() {
         method: 'POST',
         credentials: 'include',
       });
-      
+
       if (response.status === 401) {
         handle401();
         return;
       }
-      
+
       if (response.ok) {
         const result = await response.json();
         await fetchStatus();
-        setSyncNotification({ 
-          type: 'success', 
+        setSyncNotification({
+          type: 'success',
           message: result.message || 'Successfully pulled latest changes',
           operation: 'pull'
         });
@@ -444,8 +444,8 @@ export default function GitSyncView() {
       }
     } catch (error: any) {
       errorLog('Git pull failed:', error);
-      setSyncNotification({ 
-        type: 'error', 
+      setSyncNotification({
+        type: 'error',
         message: error.message || 'Failed to pull from remote repository',
         operation: 'pull'
       });
@@ -459,14 +459,14 @@ export default function GitSyncView() {
     debugLog('Push button clicked, starting push...');
     setIsPushing(true);
     setLoadError(null); // Clear any previous errors
-    
+
     try {
       debugLog('Sending push request with message:', commitMessage || '(empty)');
-      
+
       // Add timeout to prevent hanging
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-      
+
       const response = await fetch('/api/git/push', {
         method: 'POST',
         credentials: 'include',
@@ -474,21 +474,21 @@ export default function GitSyncView() {
         body: JSON.stringify({ message: commitMessage || 'Manual push from DD-UI' }),
         signal: controller.signal,
       }).finally(() => clearTimeout(timeoutId));
-      
+
       debugLog('Push response status:', response.status);
-      
+
       if (response.status === 401) {
         handle401();
         return;
       }
-      
+
       if (response.ok) {
         const result = await response.json();
         debugLog('Push succeeded:', result);
         await fetchStatus();
         setCommitMessage('');
-        setSyncNotification({ 
-          type: 'success', 
+        setSyncNotification({
+          type: 'success',
           message: result.message || 'Successfully pushed changes to remote',
           operation: 'push'
         });
@@ -504,8 +504,8 @@ export default function GitSyncView() {
           errorMessage = errorText || 'Push failed with no error message';
         }
         errorLog('Push failed with status', response.status, ':', errorMessage);
-        setSyncNotification({ 
-          type: 'error', 
+        setSyncNotification({
+          type: 'error',
           message: errorMessage,
           operation: 'push'
         });
@@ -515,16 +515,16 @@ export default function GitSyncView() {
     } catch (error: any) {
       if (error.name === 'AbortError') {
         errorLog('Push request timed out after 30 seconds');
-        setSyncNotification({ 
-          type: 'error', 
+        setSyncNotification({
+          type: 'error',
           message: 'Push timed out - the operation is taking too long',
           operation: 'push'
         });
         setLoadError('Push timed out - the operation is taking too long');
       } else {
         errorLog('Git push error:', error);
-        setSyncNotification({ 
-          type: 'error', 
+        setSyncNotification({
+          type: 'error',
           message: error.message || 'Failed to push to remote repository',
           operation: 'push'
         });
@@ -627,7 +627,7 @@ export default function GitSyncView() {
           </div>
         </div>
       </div>
-      
+
       {/* Note about overrides */}
       <div className="mb-6">
         <p className="text-sm text-slate-500 italic">
@@ -659,14 +659,14 @@ export default function GitSyncView() {
                 Sync {status?.sync_enabled ? 'Enabled' : 'Disabled'}
               </span>
             </div>
-            
+
             {status?.last_commit && (
               <div className="flex items-center gap-2 text-slate-400">
                 <GitCommit className="w-4 h-4" />
                 <code className="text-xs">{status.last_commit}</code>
               </div>
             )}
-            
+
             {status?.unresolved_conflicts && status.unresolved_conflicts > 0 && (
               <div className="flex items-center gap-2 text-yellow-400">
                 <AlertTriangle className="w-4 h-4" />
@@ -674,7 +674,7 @@ export default function GitSyncView() {
               </div>
             )}
           </div>
-          
+
           <div className="flex items-center gap-2">
             <button
               onClick={handlePull}
@@ -684,7 +684,7 @@ export default function GitSyncView() {
               <Download className="w-4 h-4" />
               Pull
             </button>
-            
+
             <button
               onClick={handleSync}
               disabled={isSyncing || !status?.sync_enabled}
@@ -693,7 +693,7 @@ export default function GitSyncView() {
               <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
               Sync
             </button>
-            
+
             <button
               onClick={handlePush}
               disabled={isPushing || !status?.sync_enabled}
@@ -704,7 +704,7 @@ export default function GitSyncView() {
             </button>
           </div>
         </div>
-        
+
         {status?.last_error && (
           <div className="mt-3 p-2 bg-red-900/30 border border-red-700 rounded text-red-400 text-sm">
             <AlertCircle className="w-4 h-4 inline mr-2" />
@@ -720,7 +720,7 @@ export default function GitSyncView() {
             <Settings className="w-5 h-5" />
             Repository Configuration
           </h2>
-          
+
           <div className="flex items-center gap-4">
             <label className="text-sm font-medium text-slate-300">Sync</label>
             <div className="flex gap-2">
@@ -851,8 +851,8 @@ export default function GitSyncView() {
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
-                    onClick={() => setEditedConfig({ 
-                      ...editedConfig, 
+                    onClick={() => setEditedConfig({
+                      ...editedConfig,
                       sync_mode: 'pull',
                       auto_pull: true,
                       auto_push: false
@@ -866,11 +866,11 @@ export default function GitSyncView() {
                     <Download className="w-4 h-4 inline-block mr-1" />
                     Pull
                   </button>
-                  
+
                   <button
                     type="button"
-                    onClick={() => setEditedConfig({ 
-                      ...editedConfig, 
+                    onClick={() => setEditedConfig({
+                      ...editedConfig,
                       sync_mode: 'sync',
                       auto_pull: true,
                       auto_push: true
@@ -884,11 +884,11 @@ export default function GitSyncView() {
                     <RefreshCw className="w-4 h-4 inline-block mr-1" />
                     Sync
                   </button>
-                  
+
                   <button
                     type="button"
-                    onClick={() => setEditedConfig({ 
-                      ...editedConfig, 
+                    onClick={() => setEditedConfig({
+                      ...editedConfig,
                       sync_mode: 'push',
                       auto_pull: false,
                       auto_push: true
@@ -919,7 +919,7 @@ export default function GitSyncView() {
             >
               {isTestingConnection ? 'Testing...' : 'Test Connection'}
             </button>
-            
+
             <button
               type="submit"
               disabled={isSaving}

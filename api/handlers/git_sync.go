@@ -26,7 +26,7 @@ func NewGitSyncHandlers() *GitSyncHandlers {
 // GetConfig returns the current Git sync configuration
 func (h *GitSyncHandlers) GetConfig(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	
+
 	config, err := database.GetGitSyncConfig(ctx)
 	if err != nil {
 		common.ErrorLog("Failed to get git config: %v", err)
@@ -64,7 +64,7 @@ func (h *GitSyncHandlers) GetConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	common.DebugLog("Returning config: repo=%s, branch=%s, author=%s <%s>",
-		response["repo_url"], response["branch"], 
+		response["repo_url"], response["branch"],
 		response["commit_author_name"], response["commit_author_email"])
 
 	w.Header().Set("Content-Type", "application/json")
@@ -87,11 +87,11 @@ func (h *GitSyncHandlers) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	config.PushOnChange = true
 	// Ignore sync_path from frontend - derive from DD_UI_IAC_ROOT
 	config.SyncPath = strings.TrimSpace(common.Env("DD_UI_IAC_ROOT", "/data"))
-	
-	common.DebugLog("Received git config update: repo=%s, branch=%s, has_token=%v, has_key=%v", 
+
+	common.DebugLog("Received git config update: repo=%s, branch=%s, has_token=%v, has_key=%v",
 		config.RepoURL, config.Branch, config.AuthToken != "", config.SSHKey != "")
 	common.DebugLog("Full config received: author_name=%s, author_email=%s, sync_enabled=%v, sync_mode=%s, force=%v, path=%s",
-		config.CommitAuthorName, config.CommitAuthorEmail, config.SyncEnabled, 
+		config.CommitAuthorName, config.CommitAuthorEmail, config.SyncEnabled,
 		config.SyncMode, config.ForceOnConflict, config.SyncPath)
 
 	// Get existing config to preserve tokens if not updated
@@ -99,7 +99,7 @@ func (h *GitSyncHandlers) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	if existErr != nil {
 		common.DebugLog("No existing config or error: %v", existErr)
 	}
-	
+
 	if existing != nil {
 		// Only preserve credentials if they weren't provided
 		// The frontend should send actual values for all other fields
@@ -161,17 +161,17 @@ func (h *GitSyncHandlers) Pull(w http.ResponseWriter, r *http.Request) {
 	gitSync := services.GetGitSync()
 	if err := gitSync.Pull(ctx, user); err != nil {
 		common.ErrorLog("Git pull failed: %v", err)
-		
+
 		response := map[string]interface{}{
 			"status": "error",
 			"message": err.Error(),
 		}
-		
+
 		// Check for conflicts
 		if conflicts, _ := database.GetUnresolvedConflicts(ctx); len(conflicts) > 0 {
 			response["conflicts"] = conflicts
 		}
-		
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusConflict)
 		json.NewEncoder(w).Encode(response)
@@ -222,17 +222,17 @@ func (h *GitSyncHandlers) Sync(w http.ResponseWriter, r *http.Request) {
 	gitSync := services.GetGitSync()
 	if err := gitSync.Sync(ctx, user); err != nil {
 		common.ErrorLog("Git sync failed: %v", err)
-		
+
 		response := map[string]interface{}{
 			"status": "error",
 			"message": err.Error(),
 		}
-		
+
 		// Check for conflicts
 		if conflicts, _ := database.GetUnresolvedConflicts(ctx); len(conflicts) > 0 {
 			response["conflicts"] = conflicts
 		}
-		
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusConflict)
 		json.NewEncoder(w).Encode(response)
@@ -319,7 +319,7 @@ func (h *GitSyncHandlers) ResolveConflict(w http.ResponseWriter, r *http.Request
 // CheckInitialSetupConflict checks if both local and remote have files during initial setup
 func (h *GitSyncHandlers) CheckInitialSetupConflict(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	
+
 	// Get current config
 	config, err := database.GetGitSyncConfig(ctx)
 	if err != nil || config == nil || config.RepoURL == "" {
@@ -330,15 +330,15 @@ func (h *GitSyncHandlers) CheckInitialSetupConflict(w http.ResponseWriter, r *ht
 		})
 		return
 	}
-	
+
 	// Check for initial setup conflict
 	hasConflict := false
 	message := ""
-	
+
 	// Check if local has docker-compose or inventory files
 	hasLocalFiles := false
 	syncPath := "/data"
-	
+
 	// Check for local docker-compose directory
 	if info, err := os.Stat(syncPath + "/docker-compose"); err == nil && info.IsDir() {
 		entries, _ := os.ReadDir(syncPath + "/docker-compose")
@@ -346,18 +346,18 @@ func (h *GitSyncHandlers) CheckInitialSetupConflict(w http.ResponseWriter, r *ht
 			hasLocalFiles = true
 		}
 	}
-	
+
 	// Check for local inventory file
 	if _, err := os.Stat(syncPath + "/inventory"); err == nil {
 		hasLocalFiles = true
 	}
-	
+
 	// Only check remote if we have local files
 	if hasLocalFiles {
 		// Test connection to see if remote exists and has files
 		cmd := exec.Command("git", "ls-remote", "--heads", config.RepoURL, config.Branch)
 		cmd.Env = os.Environ()
-		
+
 		// Add authentication if provided
 		if config.AuthToken != "" {
 			cmd.Env = append(cmd.Env,
@@ -377,20 +377,20 @@ func (h *GitSyncHandlers) CheckInitialSetupConflict(w http.ResponseWriter, r *ht
 				tmpFile.Close()
 				os.Chmod(tmpFile.Name(), 0600)
 				defer os.Remove(tmpFile.Name())
-				
+
 				cmd.Env = append(cmd.Env,
 					fmt.Sprintf("GIT_SSH_COMMAND=ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes -o LogLevel=ERROR", tmpFile.Name()),
 				)
 			}
 		}
-		
+
 		if output, err := cmd.CombinedOutput(); err == nil && len(output) > 0 {
 			// Remote exists and has content - this indicates potential conflict
 			hasConflict = true
 			message = "Both local (/data) and remote repository contain files. Choose Push to overwrite remote with local, Pull to overwrite local with remote, or manually resolve before enabling sync."
 		}
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"has_conflict": hasConflict,
@@ -401,7 +401,7 @@ func (h *GitSyncHandlers) CheckInitialSetupConflict(w http.ResponseWriter, r *ht
 
 // TestConnection tests the Git repository connection
 func (h *GitSyncHandlers) TestConnection(w http.ResponseWriter, r *http.Request) {
-	
+
 	common.DebugLog("TestConnection: Starting connection test")
 
 	var req struct {
@@ -427,7 +427,7 @@ func (h *GitSyncHandlers) TestConnection(w http.ResponseWriter, r *http.Request)
 		req.Branch = "main"
 	}
 
-	common.DebugLog("TestConnection: Testing repo=%s, branch=%s, has_token=%v, has_key=%v", 
+	common.DebugLog("TestConnection: Testing repo=%s, branch=%s, has_token=%v, has_key=%v",
 		req.RepoURL, req.Branch, req.AuthToken != "", req.SSHKey != "")
 
 	// Validate inputs
@@ -444,7 +444,7 @@ func (h *GitSyncHandlers) TestConnection(w http.ResponseWriter, r *http.Request)
 	// Validate URL and authentication combination
 	isHTTPS := strings.HasPrefix(req.RepoURL, "https://") || strings.HasPrefix(req.RepoURL, "http://")
 	isSSH := strings.HasPrefix(req.RepoURL, "git@") || strings.Contains(req.RepoURL, "ssh://")
-	
+
 	if isHTTPS && req.SSHKey != "" && req.AuthToken == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
@@ -454,7 +454,7 @@ func (h *GitSyncHandlers) TestConnection(w http.ResponseWriter, r *http.Request)
 		})
 		return
 	}
-	
+
 	if isSSH && req.AuthToken != "" && req.SSHKey == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
@@ -464,7 +464,7 @@ func (h *GitSyncHandlers) TestConnection(w http.ResponseWriter, r *http.Request)
 		})
 		return
 	}
-	
+
 	// If no credentials provided in request, try to use stored credentials
 	if req.AuthToken == "" && req.SSHKey == "" {
 		// Try to get stored config
@@ -479,12 +479,12 @@ func (h *GitSyncHandlers) TestConnection(w http.ResponseWriter, r *http.Request)
 			}
 		}
 	}
-	
+
 	// Test connection by attempting to ls-remote
 	common.DebugLog("TestConnection: Running git ls-remote --heads %s", req.RepoURL)
 	cmd := exec.Command("git", "ls-remote", "--heads", req.RepoURL)
 	cmd.Env = os.Environ() // Start with current environment
-	
+
 	// Add authentication if provided
 	if req.AuthToken != "" {
 		common.DebugLog("TestConnection: Using token authentication for HTTPS")
@@ -507,13 +507,13 @@ func (h *GitSyncHandlers) TestConnection(w http.ResponseWriter, r *http.Request)
 			})
 			return
 		}
-		
+
 		// Write SSH key ensuring it has proper line ending
 		sshKeyContent := req.SSHKey
 		if !strings.HasSuffix(sshKeyContent, "\n") {
 			sshKeyContent += "\n"
 		}
-		
+
 		if _, err := tmpFile.WriteString(sshKeyContent); err != nil {
 			common.ErrorLog("TestConnection: Failed to write SSH key: %v", err)
 			tmpFile.Close()
@@ -527,7 +527,7 @@ func (h *GitSyncHandlers) TestConnection(w http.ResponseWriter, r *http.Request)
 			return
 		}
 		tmpFile.Close()
-		
+
 		// Set proper permissions
 		if err := os.Chmod(tmpFile.Name(), 0600); err != nil {
 			common.ErrorLog("TestConnection: Failed to set SSH key permissions: %v", err)
@@ -541,7 +541,7 @@ func (h *GitSyncHandlers) TestConnection(w http.ResponseWriter, r *http.Request)
 			return
 		}
 		defer os.Remove(tmpFile.Name())
-		
+
 		cmd.Env = append(cmd.Env,
 			fmt.Sprintf("GIT_SSH_COMMAND=ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes -o LogLevel=ERROR", tmpFile.Name()),
 		)
@@ -549,7 +549,7 @@ func (h *GitSyncHandlers) TestConnection(w http.ResponseWriter, r *http.Request)
 
 	output, err := cmd.CombinedOutput()
 	outputStr := string(output)
-	
+
 	if err != nil {
 		common.ErrorLog("TestConnection: Command failed: %v", err)
 		common.ErrorLog("TestConnection: Output length: %d", len(outputStr))
@@ -558,10 +558,10 @@ func (h *GitSyncHandlers) TestConnection(w http.ResponseWriter, r *http.Request)
 		} else {
 			common.ErrorLog("TestConnection: No output from git command")
 		}
-		
+
 		// Parse error message for common issues
 		var errorMsg string
-		
+
 		// Check for SSH-specific errors
 		if strings.Contains(outputStr, "Permission denied (publickey") {
 			errorMsg = "SSH authentication failed. Please check your SSH key has access to the repository."
@@ -596,12 +596,12 @@ func (h *GitSyncHandlers) TestConnection(w http.ResponseWriter, r *http.Request)
 		} else {
 			errorMsg = fmt.Sprintf("Connection failed: %s", strings.TrimSpace(outputStr))
 		}
-		
+
 		// Ensure we always have an error message
 		if errorMsg == "" || errorMsg == "Connection failed: " {
 			errorMsg = "Connection test failed. Please check your repository URL and credentials."
 		}
-		
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{

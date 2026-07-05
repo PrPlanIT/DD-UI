@@ -42,11 +42,11 @@ CREATE TRIGGER update_cleanup_jobs_updated_at BEFORE UPDATE
 -- Add constraint to ensure valid operation types
 ALTER TABLE cleanup_jobs ADD CONSTRAINT valid_operation
     CHECK (operation IN (
-        'system_prune', 
-        'image_prune', 
-        'container_prune', 
-        'volume_prune', 
-        'network_prune', 
+        'system_prune',
+        'image_prune',
+        'container_prune',
+        'volume_prune',
+        'network_prune',
         'build_cache_prune'
     ));
 
@@ -59,5 +59,5 @@ ALTER TABLE cleanup_jobs ADD CONSTRAINT logical_timestamps
     );
 
 -- Add partial index for active jobs
-CREATE INDEX idx_cleanup_jobs_active ON cleanup_jobs(created_at DESC) 
+CREATE INDEX idx_cleanup_jobs_active ON cleanup_jobs(created_at DESC)
     WHERE status IN ('queued', 'running');

@@ -20,7 +20,7 @@ type ImageRow = {
 export default function ImagesView({ hosts }: { hosts: Host[] }) {
   const { hostName: urlHostName } = useParams<{ hostName: string }>();
   const navigate = useNavigate();
-  
+
   // Get host from URL parameter, fallback to localStorage, then first host
   const getInitialHost = () => {
     if (urlHostName) return decodeURIComponent(urlHostName);
@@ -79,7 +79,7 @@ export default function ImagesView({ hosts }: { hosts: Host[] }) {
 
   const sortedRows = useMemo(() => {
     let filtered = rows;
-    
+
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.trim().toLowerCase();
@@ -88,15 +88,15 @@ export default function ImagesView({ hosts }: { hosts: Host[] }) {
         return searchText.includes(query);
       });
     }
-    
+
     // Apply sorting
     const copy = [...filtered];
     copy.sort((a, b) => {
       const aVal = a[sort.key];
       const bVal = b[sort.key];
-      
+
       let result: number;
-      
+
       // Handle boolean values (orphaned)
       if (typeof aVal === 'boolean' && typeof bVal === 'boolean') {
         result = aVal === bVal ? 0 : aVal ? 1 : -1;
@@ -107,7 +107,7 @@ export default function ImagesView({ hosts }: { hosts: Host[] }) {
         const bStr = (bVal || '') as string;
         result = aStr.localeCompare(bStr);
       }
-      
+
       return sort.direction === 'asc' ? result : -result;
     });
     return copy;
@@ -157,12 +157,12 @@ export default function ImagesView({ hosts }: { hosts: Host[] }) {
       headers: { "Content-Type": "application/json" },
       body,
     });
-    
+
     if (r.status === 401) {
       handle401();
       return;
     }
-    
+
     if (!r.ok) {
       const errorText = await r.text().catch(() => "Delete failed");
       alert(errorText);
@@ -170,14 +170,14 @@ export default function ImagesView({ hosts }: { hosts: Host[] }) {
     }
 
     const j = await r.json().catch(() => ({}));
-    
+
     // Check individual results and show feedback
     if (j.results) {
       const failed = j.results.filter((result: any) => !result.ok);
       const succeeded = j.results.filter((result: any) => result.ok);
-      
+
       if (failed.length > 0) {
-        const errorMessages = failed.map((result: any) => 
+        const errorMessages = failed.map((result: any) =>
           `${result.id.slice(7, 19)}: ${result.err}`
         ).join('\n');
         alert(`${succeeded.length} images deleted successfully.\n\nFailed to delete ${failed.length} images:\n${errorMessages}`);
@@ -185,7 +185,7 @@ export default function ImagesView({ hosts }: { hosts: Host[] }) {
         // All succeeded - no need for alert, just refresh
       }
     }
-    
+
     // refresh
     const rr = await fetch(`/api/images/hosts/${encodeURIComponent(hostName)}`, { credentials: "include" });
     if (rr.status === 401) {
@@ -202,7 +202,7 @@ export default function ImagesView({ hosts }: { hosts: Host[] }) {
       <div className="flex items-center gap-4">
         <div className="text-lg font-semibold text-white">Images</div>
         <HostPicker hosts={hosts} activeHost={hostName} setActiveHost={handleHostChange} />
-        <SearchBar 
+        <SearchBar
           value={searchQuery}
           onChange={setSearchQuery}
           placeholder="Search images..."
@@ -299,7 +299,7 @@ export default function ImagesView({ hosts }: { hosts: Host[] }) {
       </div>
 
       <p className="text-xs text-slate-500">
-        Tip: Click to select one, Ctrl/Cmd-click to toggle, Shift-click to select a range. 
+        Tip: Click to select one, Ctrl/Cmd-click to toggle, Shift-click to select a range.
         "Outdated" indicates images that no longer match the current repository tag - this includes manually built images or when newer versions have been pulled.
       </p>
     </div>

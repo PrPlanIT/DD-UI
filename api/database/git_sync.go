@@ -46,7 +46,7 @@ func GetGitSyncConfig(ctx context.Context) (*GitSyncConfig, error) {
 	query := `
 		SELECT id, repo_url, branch, auth_token, ssh_key,
 		       commit_author_name, commit_author_email,
-		       sync_enabled, COALESCE(sync_mode, 'off'), 
+		       sync_enabled, COALESCE(sync_mode, 'off'),
 		       COALESCE(force_on_conflict, false),
 		       COALESCE(last_sync_hash, ''),
 		       auto_push, auto_pull,
@@ -121,7 +121,7 @@ func UpdateGitSyncConfig(ctx context.Context, config *GitSyncConfig) error {
 	common.DebugLog("UpdateGitSyncConfig called with: repo=%s, branch=%s, author=%s <%s>, sync=%v, auto_push=%v, auto_pull=%v",
 		config.RepoURL, config.Branch, config.CommitAuthorName, config.CommitAuthorEmail,
 		config.SyncEnabled, config.AutoPush, config.AutoPull)
-	
+
 	// Encrypt sensitive fields if SOPS is available
 	authToken := config.AuthToken
 	sshKey := config.SSHKey
@@ -143,12 +143,12 @@ func UpdateGitSyncConfig(ctx context.Context, config *GitSyncConfig) error {
 	// First check if a config exists
 	var existingID int
 	err := common.DB.QueryRow(ctx, "SELECT id FROM git_sync_config LIMIT 1").Scan(&existingID)
-	
+
 	if err != nil && !strings.Contains(err.Error(), "no rows") {
 		// Real error
 		return err
 	}
-	
+
 	var query string
 	if existingID > 0 {
 		// Update existing
@@ -260,7 +260,7 @@ func LogGitSyncOperation(ctx context.Context, entry GitSyncLogEntry) error {
 // GetGitSyncLogs retrieves recent Git sync logs
 func GetGitSyncLogs(ctx context.Context, limit int) ([]map[string]interface{}, error) {
 	query := `
-		SELECT operation, status, commit_after, files_changed, 
+		SELECT operation, status, commit_after, files_changed,
 		       message, initiated_by, duration_ms, started_at, completed_at
 		FROM git_sync_log
 		ORDER BY started_at DESC
@@ -415,7 +415,7 @@ func ResolveGitConflict(ctx context.Context, conflictID int, resolutionType, res
 // GetGitSyncStatus retrieves the current sync status
 func GetGitSyncStatus(ctx context.Context) (map[string]interface{}, error) {
 	query := `
-		SELECT sync_enabled, last_pull_at, last_push_at, 
+		SELECT sync_enabled, last_pull_at, last_push_at,
 		       last_commit_hash, last_sync_status, last_sync_message
 		FROM git_sync_config
 		LIMIT 1

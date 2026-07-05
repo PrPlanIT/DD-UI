@@ -25,12 +25,12 @@ interface NewStackDialogProps {
   defaultScopeKind?: 'host' | 'group';
 }
 
-export default function NewStackDialog({ 
-  open, 
-  onClose, 
-  onStackCreated, 
-  hosts, 
-  groups = [], 
+export default function NewStackDialog({
+  open,
+  onClose,
+  onStackCreated,
+  hosts,
+  groups = [],
   defaultHost,
   defaultScopeKind = 'host'
 }: NewStackDialogProps) {
@@ -99,14 +99,14 @@ export default function NewStackDialog({
       setNameError('Stack name is required');
       return false;
     }
-    
+
     if (hasUnsupportedChars(name)) {
       const preview = dockerSanitizePreview(name);
       setNameError(`Docker Compose will normalize this to: ${preview}`);
       // This is a warning, not an error - allow creation
       return true;
     }
-    
+
     setNameError('');
     return true;
   };
@@ -256,8 +256,8 @@ export default function NewStackDialog({
           <Button variant="outline" onClick={onClose} disabled={creating}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleSubmit} 
+          <Button
+            onClick={handleSubmit}
             disabled={creating || !stackName.trim() || !scopeName}
             className="bg-[#310937] hover:bg-[#2a0830]"
           >

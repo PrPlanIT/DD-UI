@@ -84,7 +84,7 @@ export default function LoggingView() {
     byHost: {},
     byStack: {},
   });
-  
+
   // Dropdown open states
   const [hostDropdownOpen, setHostDropdownOpen] = useState(false);
   const [stackDropdownOpen, setStackDropdownOpen] = useState(false);
@@ -203,7 +203,7 @@ export default function LoggingView() {
   // Cascade filters: when host changes, filter stacks and containers
   useEffect(() => {
     debugLog("Host selection changed:", selectedHost);
-    
+
     if (selectedHost === "all") {
       setFilteredStacks(logSources.stacks);
       setFilteredContainers(logSources.containers);
@@ -214,13 +214,13 @@ export default function LoggingView() {
       )];
       debugLog("Stacks available for host", selectedHost, ":", stacksInHost);
       setFilteredStacks(stacksInHost);
-      
+
       // Filter containers by host
       setFilteredContainers(
         logSources.containers.filter(c => c.host === selectedHost)
       );
     }
-    
+
     // Don't reset stack here - we'll check it after the filtered stacks are set
   }, [selectedHost, logSources]);
 
@@ -234,9 +234,9 @@ export default function LoggingView() {
   // When stack changes, filter containers
   useEffect(() => {
     debugLog("Stack selection changed:", selectedStack, "Host:", selectedHost);
-    
+
     let filtered: Array<{ name: string; host: string; stack?: string }> = [];
-    
+
     if (selectedHost === "all" && selectedStack === "all") {
       filtered = logSources.containers;
     } else if (selectedHost !== "all" && selectedStack === "all") {
@@ -248,10 +248,10 @@ export default function LoggingView() {
         c => c.host === selectedHost && c.stack === selectedStack
       );
     }
-    
+
     debugLog("Filtered containers for stack", selectedStack, ":", filtered.map(c => c.name));
     setFilteredContainers(filtered);
-    
+
     // Reset container selection if it's no longer valid
     if (selectedContainer !== "all" && !filtered.some(c => c.name === selectedContainer)) {
       debugLog("Resetting container selection, current:", selectedContainer);
@@ -268,7 +268,7 @@ export default function LoggingView() {
       levels: logLevels,
       search: searchQuery
     });
-    
+
     // Disconnect existing stream
     if (eventSourceRef.current) {
       debugLog("Closing existing log stream connection");
@@ -279,7 +279,7 @@ export default function LoggingView() {
     // Clear everything when reconnecting with new filters
     setFilteredLogs([]);
     setLogBuffer([]);  // Also clear the buffer to prevent stale data
-    
+
     // Reset stats since we're changing scope
     setStats({
       total: 0,
@@ -287,21 +287,21 @@ export default function LoggingView() {
       byHost: {},
       byStack: {},
     });
-    
+
     if (terminalInstance.current) {
       terminalInstance.current.clear();
       terminalInstance.current.writeln("\x1b[36m📊 DD-UI Logging System\x1b[0m");
       terminalInstance.current.writeln("\x1b[90m" + "=".repeat(80) + "\x1b[0m");
       terminalInstance.current.writeln("");
       terminalInstance.current.writeln("\x1b[33m⚡ Connecting with filters...\x1b[0m");
-      
+
       // Show active filters for clarity
       const activeFilters = [];
       if (selectedHost !== "all") activeFilters.push(`Host: ${selectedHost}`);
       if (selectedStack !== "all") activeFilters.push(`Stack: ${selectedStack}`);
       if (selectedContainer !== "all") activeFilters.push(`Container: ${selectedContainer}`);
       if (searchQuery) activeFilters.push(`Search: "${searchQuery}"`);
-      
+
       if (activeFilters.length > 0) {
         terminalInstance.current.writeln("\x1b[90mActive filters: " + activeFilters.join(", ") + "\x1b[0m");
       } else {
@@ -311,9 +311,9 @@ export default function LoggingView() {
 
     // Preflight auth check before opening EventSource
     try {
-      const authCheck = await fetch('/api/logs/sources', { 
+      const authCheck = await fetch('/api/logs/sources', {
         credentials: 'include',
-        method: 'HEAD' 
+        method: 'HEAD'
       });
       if (authCheck.status === 401) {
         handle401();
@@ -381,25 +381,25 @@ export default function LoggingView() {
 
     eventSource.onerror = (error) => {
       setIsConnected(false);
-      
+
       // Only log as error if it's not a normal close
       if (eventSource.readyState === EventSource.CLOSED) {
         debugLog("Log stream connection closed");
       } else {
         warnLog("Log stream connection error, readyState:", eventSource.readyState);
       }
-      
+
       // Don't show reconnect message if we're not following anymore
       if (terminalInstance.current && isFollowingRef.current) {
         terminalInstance.current.writeln(
           "\x1b[33m⟳ Connection interrupted. Reconnecting in 3 seconds...\x1b[0m"
         );
       }
-      
+
       // Close the current connection
       eventSource.close();
       eventSourceRef.current = null;
-      
+
       // Only reconnect if still following (check the ref, not the stale closure)
       if (isFollowingRef.current) {
         setTimeout(() => {
@@ -418,19 +418,19 @@ export default function LoggingView() {
   const matchesCurrentFilters = useCallback((entry: LogEntry) => {
     // Since backend is already filtering, this is just a safety check
     // to prevent displaying logs that shouldn't be shown due to race conditions
-    
+
     // Check log levels
     if (logLevels.length > 0 && !logLevels.includes(entry.level)) {
       debugLog("Filtering out log due to level mismatch:", entry.level, "not in", logLevels);
       return false;
     }
-    
+
     // Check host
     if (selectedHost !== "all" && entry.hostname !== selectedHost) {
       debugLog("Filtering out log due to host mismatch:", entry.hostname, "!=", selectedHost);
       return false;
     }
-    
+
     // Check stack - handle both null/undefined and empty string
     if (selectedStack !== "all" && entry.stack_name !== selectedStack) {
       // Allow logs without stack_name if they match container directly
@@ -439,18 +439,18 @@ export default function LoggingView() {
         return false;
       }
     }
-    
+
     // Check container
     if (selectedContainer !== "all" && entry.container_name !== selectedContainer) {
       debugLog("Filtering out log due to container mismatch:", entry.container_name, "!=", selectedContainer);
       return false;
     }
-    
+
     // Check search query
     if (searchQuery && !entry.message.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
     }
-    
+
     return true;
   }, [selectedHost, selectedStack, selectedContainer, logLevels, searchQuery]);
 
@@ -459,7 +459,7 @@ export default function LoggingView() {
     (entry: LogEntry) => {
       // Backend is already filtering, so we just display what we receive
       // No need for client-side filtering since the backend handles it
-      
+
       // Update filtered logs (these are already filtered by backend)
       setFilteredLogs((prev) => {
         const updated = [...prev, entry].slice(-1000); // Keep last 1000 entries
@@ -524,7 +524,7 @@ export default function LoggingView() {
 
     // If following, start/restart the connection
     debugLog("Starting/restarting log stream with isFollowing:", isFollowing);
-    
+
     // Use a small delay to debounce rapid changes
     const timer = setTimeout(() => {
       // Double-check we're still following after the delay
@@ -557,7 +557,7 @@ export default function LoggingView() {
         byHost: {},
         byStack: {},
       });
-      
+
       // Write a message indicating scope
       terminalInstance.current.writeln("\x1b[33m⟳ Cleared visible logs\x1b[0m");
       terminalInstance.current.writeln(`\x1b[90mScope: ${selectedHost === "all" ? "All Hosts" : selectedHost}${selectedStack !== "all" ? ` / ${selectedStack}` : ""}${selectedContainer !== "all" ? ` / ${selectedContainer}` : ""}\x1b[0m`);
@@ -574,14 +574,14 @@ export default function LoggingView() {
       }
       return;
     }
-    
+
     // Build filename with scope information
     const scopeParts = [];
     if (selectedHost !== "all") scopeParts.push(selectedHost);
     if (selectedStack !== "all") scopeParts.push(selectedStack);
     if (selectedContainer !== "all") scopeParts.push(selectedContainer);
     const scopeStr = scopeParts.length > 0 ? `-${scopeParts.join("-")}` : "";
-    
+
     const content = filteredLogs .map((entry) => {
         return `${entry.timestamp} [${entry.level}] ${entry.hostname}/${entry.container_name || entry.service_name}: ${entry.message}`;
       }) .join("\n");
@@ -593,7 +593,7 @@ export default function LoggingView() {
     a.download = `logs${scopeStr}-${new Date().toISOString()}.txt`;
     a.click();
     URL.revokeObjectURL(url);
-    
+
     // Show confirmation
     if (terminalInstance.current) {
       terminalInstance.current.writeln(`\x1b[32m✓ Exported ${filteredLogs.length} visible log entries\x1b[0m`);
@@ -647,7 +647,7 @@ export default function LoggingView() {
                 </div>
                 <ChevronDown className="w-4 h-4" />
               </button>
-              
+
               {hostDropdownOpen && (
                 <>
                   <div
@@ -719,7 +719,7 @@ export default function LoggingView() {
                 </div>
                 <ChevronDown className="w-4 h-4" />
               </button>
-              
+
               {stackDropdownOpen && filteredStacks.length > 0 && (
                 <>
                   <div
@@ -791,7 +791,7 @@ export default function LoggingView() {
                 </div>
                 <ChevronDown className="w-4 h-4 flex-shrink-0" />
               </button>
-              
+
               {containerDropdownOpen && filteredContainers.length > 0 && (
                 <>
                   <div

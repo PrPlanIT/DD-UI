@@ -28,7 +28,7 @@ func NewReadmeGen(dataPath string) *ReadmeGenerator {
 // UpdateReadme updates the README.md with current deployment information
 func (r *ReadmeGenerator) UpdateReadme(ctx context.Context) error {
 	readmePath := filepath.Join(r.dataPath, "README.md")
-	
+
 	// Read existing README or create new one
 	content, err := os.ReadFile(readmePath)
 	if err != nil {
@@ -42,10 +42,10 @@ func (r *ReadmeGenerator) UpdateReadme(ctx context.Context) error {
 
 	// Update deployment map
 	content = r.updateDeploymentMap(ctx, content)
-	
+
 	// Update status badges
 	content = r.updateStatusBadges(ctx, content)
-	
+
 	// Update last sync timestamp
 	content = r.updateTimestamp(content)
 
@@ -105,14 +105,14 @@ func (r *ReadmeGenerator) updateDeploymentMap(ctx context.Context, content []byt
 				}
 				stackNames = append(stackNames, statusIcon+stack.Name)
 			}
-			deploymentMap.WriteString(fmt.Sprintf("| %s | %s |\n", 
-				host.Hostname, 
+			deploymentMap.WriteString(fmt.Sprintf("| %s | %s |\n",
+				host.Hostname,
 				strings.Join(stackNames, "<br>")))
 		}
 	}
 
 	// Replace content between markers
-	return r.replaceSection(content, 
+	return r.replaceSection(content,
 		"<!-- START_DEPLOYMENTS_MAP -->",
 		"<!-- END_DEPLOYMENTS_MAP -->",
 		deploymentMap.String())
@@ -129,7 +129,7 @@ func (r *ReadmeGenerator) updateStatusBadges(ctx context.Context, content []byte
 	// Build status section
 	var statusSection strings.Builder
 	statusSection.WriteString("### System Status\n\n")
-	
+
 	// Add sync status badge
 	if syncStatus["sync_enabled"] == true {
 		statusSection.WriteString("![Git Sync](https://img.shields.io/badge/Git_Sync-Enabled-green)\n")
@@ -140,7 +140,7 @@ func (r *ReadmeGenerator) updateStatusBadges(ctx context.Context, content []byte
 	// Add last sync time
 	if lastSync, ok := syncStatus["last_sync"].(time.Time); ok {
 		timeSince := time.Since(lastSync)
-		badge := fmt.Sprintf("![Last Sync](https://img.shields.io/badge/Last_Sync-%s_ago-blue)\n", 
+		badge := fmt.Sprintf("![Last Sync](https://img.shields.io/badge/Last_Sync-%s_ago-blue)\n",
 			r.formatDuration(timeSince))
 		statusSection.WriteString(badge)
 	}
@@ -166,7 +166,7 @@ func (r *ReadmeGenerator) updateStatusBadges(ctx context.Context, content []byte
 // updateTimestamp updates the last updated timestamp
 func (r *ReadmeGenerator) updateTimestamp(content []byte) []byte {
 	timestamp := fmt.Sprintf("_Last updated: %s_", time.Now().Format("2006-01-02 15:04:05 MST"))
-	
+
 	return r.replaceSection(content,
 		"<!-- START_TIMESTAMP -->",
 		"<!-- END_TIMESTAMP -->",
@@ -176,11 +176,11 @@ func (r *ReadmeGenerator) updateTimestamp(content []byte) []byte {
 // replaceSection replaces content between start and end markers
 func (r *ReadmeGenerator) replaceSection(content []byte, startMarker, endMarker, newContent string) []byte {
 	contentStr := string(content)
-	
+
 	// Find markers
 	startIdx := strings.Index(contentStr, startMarker)
 	endIdx := strings.Index(contentStr, endMarker)
-	
+
 	if startIdx == -1 || endIdx == -1 || startIdx >= endIdx {
 		// Markers not found or invalid - append to end
 		if startIdx == -1 && endIdx == -1 {
@@ -192,7 +192,7 @@ func (r *ReadmeGenerator) replaceSection(content []byte, startMarker, endMarker,
 	// Replace content between markers
 	before := contentStr[:startIdx+len(startMarker)]
 	after := contentStr[endIdx:]
-	
+
 	return []byte(before + "\n" + newContent + after)
 }
 

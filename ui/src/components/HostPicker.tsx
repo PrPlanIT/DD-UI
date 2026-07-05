@@ -6,7 +6,7 @@ export default function HostPicker({
   hosts, activeHost, setActiveHost,
 }: { hosts: Host[]; activeHost: string; setActiveHost: (n: string)=>void }) {
   const currentHost = hosts.find(h => h.name === activeHost);
-  
+
   return (
     <Card className="bg-slate-800/60 border-slate-700 px-3 py-1.5">
       <div className="flex items-center gap-3">

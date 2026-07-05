@@ -12,9 +12,9 @@ interface TriStateToggleProps {
   compact?: boolean;  // For minimal space usage
 }
 
-export default function TriStateToggle({ 
-  value, 
-  onChange, 
+export default function TriStateToggle({
+  value,
+  onChange,
   label = 'DevOps',
   disabled = false,
   inheritedFrom,
@@ -25,7 +25,7 @@ export default function TriStateToggle({
   // Cycle through states: unset -> off -> on -> unset
   const handleClick = () => {
     if (disabled) return;
-    
+
     if (value === null) {
       onChange(false);  // unset -> off
     } else if (value === false) {

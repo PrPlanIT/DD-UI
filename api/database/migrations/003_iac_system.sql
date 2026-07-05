@@ -6,7 +6,7 @@ CREATE TYPE iac_sops_status AS ENUM ('all','partial','none');
 
 -- Drop existing tables if they exist to ensure clean schema
 DROP TABLE IF EXISTS iac_deployments CASCADE;
-DROP TABLE IF EXISTS iac_services CASCADE;  
+DROP TABLE IF EXISTS iac_services CASCADE;
 DROP TABLE IF EXISTS iac_stack_files CASCADE;
 DROP TABLE IF EXISTS iac_stacks CASCADE;
 DROP TABLE IF EXISTS iac_repos CASCADE;
@@ -144,44 +144,44 @@ CREATE INDEX IF NOT EXISTS idx_iac_overrides_key ON iac_overrides(key);
 CREATE INDEX IF NOT EXISTS idx_settings_key ON settings(key);
 
 -- Triggers
-CREATE TRIGGER iac_repos_updated_at 
-    BEFORE UPDATE ON iac_repos 
-    FOR EACH ROW 
+CREATE TRIGGER iac_repos_updated_at
+    BEFORE UPDATE ON iac_repos
+    FOR EACH ROW
     EXECUTE FUNCTION set_updated_at();
 
-CREATE TRIGGER iac_stacks_updated_at 
-    BEFORE UPDATE ON iac_stacks 
-    FOR EACH ROW 
+CREATE TRIGGER iac_stacks_updated_at
+    BEFORE UPDATE ON iac_stacks
+    FOR EACH ROW
     EXECUTE FUNCTION set_updated_at();
 
-CREATE TRIGGER iac_services_updated_at 
-    BEFORE UPDATE ON iac_services 
-    FOR EACH ROW 
+CREATE TRIGGER iac_services_updated_at
+    BEFORE UPDATE ON iac_services
+    FOR EACH ROW
     EXECUTE FUNCTION set_updated_at();
 
-CREATE TRIGGER iac_stack_files_updated_at 
-    BEFORE UPDATE ON iac_stack_files 
-    FOR EACH ROW 
+CREATE TRIGGER iac_stack_files_updated_at
+    BEFORE UPDATE ON iac_stack_files
+    FOR EACH ROW
     EXECUTE FUNCTION set_updated_at();
 
-CREATE TRIGGER deployment_stamps_updated_at 
-    BEFORE UPDATE ON deployment_stamps 
-    FOR EACH ROW 
+CREATE TRIGGER deployment_stamps_updated_at
+    BEFORE UPDATE ON deployment_stamps
+    FOR EACH ROW
     EXECUTE FUNCTION set_updated_at();
 
-CREATE TRIGGER iac_overrides_updated_at 
-    BEFORE UPDATE ON iac_overrides 
-    FOR EACH ROW 
+CREATE TRIGGER iac_overrides_updated_at
+    BEFORE UPDATE ON iac_overrides
+    FOR EACH ROW
     EXECUTE FUNCTION set_updated_at();
 
-CREATE TRIGGER settings_updated_at 
-    BEFORE UPDATE ON settings 
-    FOR EACH ROW 
+CREATE TRIGGER settings_updated_at
+    BEFORE UPDATE ON settings
+    FOR EACH ROW
     EXECUTE FUNCTION set_updated_at();
 
 -- Add foreign key constraint to containers table for deployment_stamp_id
-ALTER TABLE containers 
-    ADD CONSTRAINT fk_containers_deployment_stamp 
-    FOREIGN KEY (deployment_stamp_id) 
-    REFERENCES deployment_stamps(id) 
+ALTER TABLE containers
+    ADD CONSTRAINT fk_containers_deployment_stamp
+    FOREIGN KEY (deployment_stamp_id)
+    REFERENCES deployment_stamps(id)
     ON DELETE SET NULL;

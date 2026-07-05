@@ -18,30 +18,30 @@ interface EnhancedHostPickerProps {
 }
 
 export default function EnhancedHostPicker({
-  hosts, 
-  groups, 
-  activeSelection, 
+  hosts,
+  groups,
+  activeSelection,
   onSelectionChange
 }: EnhancedHostPickerProps) {
-  
+
   // Build options list
   const options: PickerOption[] = [
     { type: 'all', value: 'all', label: 'All Stacks' },
-    ...groups.map(g => ({ 
-      type: 'group' as const, 
-      value: `group:${g}`, 
-      label: g 
+    ...groups.map(g => ({
+      type: 'group' as const,
+      value: `group:${g}`,
+      label: g
     })),
-    ...hosts.map(h => ({ 
-      type: 'host' as const, 
-      value: `host:${h.name}`, 
+    ...hosts.map(h => ({
+      type: 'host' as const,
+      value: `host:${h.name}`,
       label: h.name,
       address: h.address || h.addr
     }))
   ];
 
   const currentOption = options.find(o => o.value === activeSelection) || options[0];
-  
+
   const handleChange = (value: string) => {
     const option = options.find(o => o.value === value);
     if (option) {
@@ -71,7 +71,7 @@ export default function EnhancedHostPicker({
             <option value="all" className="bg-slate-900 text-slate-200">
               📊 All Stacks
             </option>
-            
+
             {groups.length > 0 && (
               <optgroup label="Groups" className="bg-slate-800">
                 {groups.map(g => (
@@ -81,7 +81,7 @@ export default function EnhancedHostPicker({
                 ))}
               </optgroup>
             )}
-            
+
             {hosts.length > 0 && (
               <optgroup label="Hosts" className="bg-slate-800">
                 {hosts.map(h => (
@@ -93,15 +93,15 @@ export default function EnhancedHostPicker({
             )}
           </select>
         </div>
-        
+
         {currentOption.type === 'host' && currentOption.address && (
           <div className="text-slate-300 text-sm font-mono">{currentOption.address}</div>
         )}
-        
+
         {currentOption.type === 'group' && (
           <div className="text-blue-400 text-sm">Group Configuration</div>
         )}
-        
+
         {currentOption.type === 'all' && (
           <div className="text-slate-400 text-sm">All Host & Group Stacks</div>
         )}

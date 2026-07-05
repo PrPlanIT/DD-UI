@@ -39,7 +39,7 @@ func (p *SSHConnectionPool) GetSSHConnection(user, host, keyFile string) (*ssh.C
 	defer p.mu.Unlock()
 
 	key := fmt.Sprintf("%s@%s", user, host)
-	
+
 	// Check if we have a valid connection
 	if conn, exists := p.connections[key]; exists {
 		conn.mu.RLock()
@@ -192,7 +192,7 @@ func ParseSSHURL(sshURL string) (user, host string, err error) {
 
 	// Remove ssh:// prefix
 	address := strings.TrimPrefix(sshURL, "ssh://")
-	
+
 	// Split user@host
 	parts := strings.SplitN(address, "@", 2)
 	if len(parts) != 2 {

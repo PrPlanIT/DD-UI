@@ -66,9 +66,9 @@ CREATE INDEX idx_git_sync_conflicts_resolved ON git_sync_conflicts(resolved);
 CREATE INDEX idx_git_sync_conflicts_file_path ON git_sync_conflicts(file_path);
 
 -- Triggers
-CREATE TRIGGER git_sync_config_updated_at 
-    BEFORE UPDATE ON git_sync_config 
-    FOR EACH ROW 
+CREATE TRIGGER git_sync_config_updated_at
+    BEFORE UPDATE ON git_sync_config
+    FOR EACH ROW
     EXECUTE FUNCTION set_updated_at();
 
 -- Initialize with empty config (only if table is empty)
@@ -80,13 +80,13 @@ INSERT INTO git_sync_config (
     force_on_conflict,
     commit_author_name,
     commit_author_email
-) 
+)
 SELECT '', 'main', FALSE, 'off', FALSE, 'DD-UI Bot', 'ddui@localhost'
 WHERE NOT EXISTS (SELECT 1 FROM git_sync_config);
 
 -- Add columns only if table exists and columns don't exist
 -- This handles upgrades from older versions
-DO $$ 
+DO $$
 BEGIN
     -- Only try to add columns if the table exists
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'git_sync_config') THEN
@@ -95,13 +95,13 @@ BEGIN
         EXCEPTION
             WHEN duplicate_column THEN NULL;
         END;
-        
+
         BEGIN
             ALTER TABLE git_sync_config ADD COLUMN force_on_conflict BOOLEAN DEFAULT FALSE;
         EXCEPTION
             WHEN duplicate_column THEN NULL;
         END;
-        
+
         BEGIN
             ALTER TABLE git_sync_config ADD COLUMN last_sync_hash TEXT;
         EXCEPTION

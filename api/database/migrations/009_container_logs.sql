@@ -34,7 +34,7 @@ DECLARE
 BEGIN
     DELETE FROM container_logs
     WHERE timestamp < NOW() - INTERVAL '1 day' * retention_days;
-    
+
     GET DIAGNOSTICS deleted_count = ROW_COUNT;
     RETURN deleted_count;
 END;

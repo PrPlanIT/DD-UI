@@ -41,11 +41,11 @@ export default function ConfirmDialog({
   return (
     <div className="fixed inset-0 z-[100] overflow-y-auto">
       {/* Backdrop */}
-      <div 
+      <div
         className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
         onClick={onCancel}
       />
-      
+
       {/* Dialog */}
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="relative bg-slate-900 rounded-lg border border-slate-800 shadow-2xl max-w-md w-full transform transition-all">
@@ -56,14 +56,14 @@ export default function ConfirmDialog({
               {title}
             </h3>
           </div>
-          
+
           {/* Body */}
           <div className="px-6 pb-6">
             <p className="text-slate-300 whitespace-pre-wrap">
               {message}
             </p>
           </div>
-          
+
           {/* Footer */}
           <div className="flex gap-3 px-6 pb-6">
             <button

@@ -54,7 +54,7 @@ type Group struct {
 	Owner       string            `json:"owner"`
 	CreatedAt   time.Time         `json:"created_at"`
 	UpdatedAt   time.Time         `json:"updated_at"`
-	
+
 	// Computed fields
 	HostCount   int      `json:"host_count"`
 	StackCount  int      `json:"stack_count"`
@@ -76,17 +76,17 @@ func SetupGroupRoutes(r chi.Router) {
 		r.Get("/", listGroups)
 		r.Post("/", createGroup)
 		r.Get("/tree", getGroupTree)
-		
+
 		r.Route("/{groupName}", func(r chi.Router) {
 			r.Get("/", getGroup)
 			r.Put("/", updateGroup)
 			r.Delete("/", deleteGroup)
-			
+
 			// Host membership
 			r.Get("/hosts", getGroupHosts)
 			r.Post("/hosts", addHostsToGroup)
 			r.Delete("/hosts/{hostname}", removeHostFromGroup)
-			
+
 			// Stack count
 			r.Get("/stacks/count", getGroupStackCount)
 		})
@@ -103,7 +103,7 @@ func listGroups(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to get groups", http.StatusInternalServerError)
 		return
 	}
-	
+
 	// Convert to API format
 	apiGroups := make([]map[string]interface{}, 0, len(groups))
 	for _, g := range groups {
@@ -121,7 +121,7 @@ func listGroups(w http.ResponseWriter, r *http.Request) {
 			"host_count":    len(g.Hosts),
 		})
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(apiGroups)
 }
@@ -136,17 +136,17 @@ func getGroupTree(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to get groups", http.StatusInternalServerError)
 		return
 	}
-	
+
 	// Build tree structure from groups
 	groupMap := make(map[string]*services.InventoryGroup)
 	var rootGroups []services.InventoryGroup
-	
+
 	// First pass: index all groups
 	for i := range groups {
 		g := groups[i]
 		groupMap[g.Name] = &g
 	}
-	
+
 	// Second pass: build parent-child relationships
 	for _, g := range groups {
 		hasParent := false
@@ -162,12 +162,12 @@ func getGroupTree(w http.ResponseWriter, r *http.Request) {
 				break
 			}
 		}
-		
+
 		if !hasParent {
 			rootGroups = append(rootGroups, g)
 		}
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(rootGroups)
 }
@@ -175,7 +175,7 @@ func getGroupTree(w http.ResponseWriter, r *http.Request) {
 // getGroup returns a specific group with its details from inventory
 func getGroup(w http.ResponseWriter, r *http.Request) {
 	groupName := chi.URLParam(r, "groupName")
-	
+
 	// Use inventory manager to get group details
 	invMgr := services.GetInventoryManager()
 	groups, err := invMgr.GetGroups()
@@ -184,7 +184,7 @@ func getGroup(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to get groups", http.StatusInternalServerError)
 		return
 	}
-	
+
 	// Find the specific group
 	for _, g := range groups {
 		if g.Name == groupName {
@@ -203,13 +203,13 @@ func getGroup(w http.ResponseWriter, r *http.Request) {
 				"host_count":  len(g.Hosts),
 				"vars":        g.Vars,
 			}
-			
+
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(result)
 			return
 		}
 	}
-	
+
 	http.Error(w, "Group not found", http.StatusNotFound)
 }
 
@@ -226,21 +226,21 @@ func createGroup(w http.ResponseWriter, r *http.Request) {
 		Owner        string            `json:"owner"`
 		Env          map[string]string `json:"env"`
 	}
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
-	
+
 	if req.Name == "" {
 		http.Error(w, "Name is required", http.StatusBadRequest)
 		return
 	}
-	
+
 	if req.Owner == "" {
 		req.Owner = "unassigned"
 	}
-	
+
 	// Use inventory manager to create group
 	invMgr := services.GetInventoryManager()
 	metadata := services.GroupMetadata{
@@ -252,16 +252,16 @@ func createGroup(w http.ResponseWriter, r *http.Request) {
 		Owner:        req.Owner,
 		Env:          req.Env,
 	}
-	
+
 	err := invMgr.CreateGroup(req.Name, req.Parent, metadata)
 	if err != nil {
 		errorLog("Failed to create group: %v", err)
 		http.Error(w, "Failed to create group", http.StatusInternalServerError)
 		return
 	}
-	
+
 	infoLog("Group %s created successfully", req.Name)
-	
+
 	// Return success
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -273,7 +273,7 @@ func createGroup(w http.ResponseWriter, r *http.Request) {
 // updateGroup updates an existing group in the inventory
 func updateGroup(w http.ResponseWriter, r *http.Request) {
 	groupName := chi.URLParam(r, "groupName")
-	
+
 	var req struct {
 		Name         string              `json:"name"`
 		Description  string              `json:"description"`
@@ -285,12 +285,12 @@ func updateGroup(w http.ResponseWriter, r *http.Request) {
 		Env          map[string]string   `json:"env"`
 		Vars         map[string]any      `json:"vars"`
 	}
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	
+
 	// Build metadata for DD-UI fields
 	metadata := services.GroupMetadata{
 		Tags:         req.Tags,
@@ -301,7 +301,7 @@ func updateGroup(w http.ResponseWriter, r *http.Request) {
 		Owner:        req.Owner,
 		Env:          req.Env,
 	}
-	
+
 	// Update group in inventory
 	invMgr := services.GetInventoryManager()
 	if err := invMgr.UpdateGroupMetadata(groupName, metadata); err != nil {
@@ -313,10 +313,10 @@ func updateGroup(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	
+
 	// TODO: Handle vars update separately if needed
 	// Currently UpdateGroupMetadata only updates DD-UI metadata fields
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
 		"message": "Group updated successfully",
@@ -327,14 +327,14 @@ func updateGroup(w http.ResponseWriter, r *http.Request) {
 func deleteGroup(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	groupID, _ := strconv.ParseInt(chi.URLParam(r, "groupId"), 10, 64)
-	
+
 	_, err := common.DB.Exec(ctx, "DELETE FROM groups WHERE id = $1", groupID)
 	if err != nil {
 		errorLog("Failed to delete group: %v", err)
 		http.Error(w, "Failed to delete group", http.StatusInternalServerError)
 		return
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
 		"message": "Group deleted successfully",
@@ -344,7 +344,7 @@ func deleteGroup(w http.ResponseWriter, r *http.Request) {
 // getGroupHosts returns all hosts in a group from inventory
 func getGroupHosts(w http.ResponseWriter, r *http.Request) {
 	groupName := chi.URLParam(r, "groupName")
-	
+
 	// Use inventory manager to get group details
 	invMgr := services.GetInventoryManager()
 	groups, err := invMgr.GetGroups()
@@ -353,7 +353,7 @@ func getGroupHosts(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to get groups", http.StatusInternalServerError)
 		return
 	}
-	
+
 	// Find the specific group
 	var targetGroup *services.InventoryGroup
 	for _, g := range groups {
@@ -362,12 +362,12 @@ func getGroupHosts(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
-	
+
 	if targetGroup == nil {
 		http.Error(w, "Group not found", http.StatusNotFound)
 		return
 	}
-	
+
 	// Get all hosts to get their details
 	allHosts, err := invMgr.GetHosts()
 	if err != nil {
@@ -375,7 +375,7 @@ func getGroupHosts(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to get hosts", http.StatusInternalServerError)
 		return
 	}
-	
+
 	// Build list of hosts in this group
 	var groupHosts []map[string]interface{}
 	for _, hostname := range targetGroup.Hosts {
@@ -394,7 +394,7 @@ func getGroupHosts(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(groupHosts)
 }
@@ -402,25 +402,25 @@ func getGroupHosts(w http.ResponseWriter, r *http.Request) {
 // addHostsToGroup adds hosts to a group in the inventory
 func addHostsToGroup(w http.ResponseWriter, r *http.Request) {
 	groupName := chi.URLParam(r, "groupName")
-	
+
 	var req struct {
 		Hosts []string `json:"hosts"`
 	}
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
-	
+
 	invMgr := services.GetInventoryManager()
-	
+
 	for _, hostname := range req.Hosts {
 		err := invMgr.AddHostToGroup(hostname, groupName)
 		if err != nil {
 			errorLog("Failed to add host %s to group: %v", hostname, err)
 		}
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
 		"message": "Hosts added to group successfully",
@@ -431,16 +431,16 @@ func addHostsToGroup(w http.ResponseWriter, r *http.Request) {
 func removeHostFromGroup(w http.ResponseWriter, r *http.Request) {
 	groupName := chi.URLParam(r, "groupName")
 	hostname := chi.URLParam(r, "hostname")
-	
+
 	invMgr := services.GetInventoryManager()
 	err := invMgr.RemoveHostFromGroup(hostname, groupName)
-	
+
 	if err != nil {
 		errorLog("Failed to remove host from group: %v", err)
 		http.Error(w, "Failed to remove host from group", http.StatusInternalServerError)
 		return
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
 		"message": "Host removed from group successfully",
@@ -451,7 +451,7 @@ func removeHostFromGroup(w http.ResponseWriter, r *http.Request) {
 func getGroupStackCount(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	groupID, _ := strconv.ParseInt(chi.URLParam(r, "groupId"), 10, 64)
-	
+
 	// Get group name first
 	var groupName string
 	err := common.DB.QueryRow(ctx, "SELECT name FROM groups WHERE id = $1", groupID).Scan(&groupName)
@@ -459,19 +459,19 @@ func getGroupStackCount(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Group not found", http.StatusNotFound)
 		return
 	}
-	
+
 	// Count stacks for this group
 	var count int
 	err = common.DB.QueryRow(ctx, `
-		SELECT COUNT(*) FROM iac_stacks 
+		SELECT COUNT(*) FROM iac_stacks
 		WHERE scope_kind = 'group' AND scope_name = $1
 	`, groupName).Scan(&count)
-	
+
 	if err != nil {
 		errorLog("Failed to get stack count: %v", err)
 		count = 0
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]int{
 		"count": count,

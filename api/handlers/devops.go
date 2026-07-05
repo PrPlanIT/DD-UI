@@ -86,8 +86,8 @@ func SetupDevopsRoutes(router chi.Router) {
 					effective = *override
 				}
 				writeJSON(w, http.StatusOK, map[string]any{
-					"override": override, 
-					"effective": effective, 
+					"override": override,
+					"effective": effective,
 					"inherits_from": "global",
 					"status": "ok",
 				})
@@ -104,7 +104,7 @@ func SetupDevopsRoutes(router chi.Router) {
 						http.Error(w, err.Error(), http.StatusNotFound)
 						return
 					}
-					
+
 					// Determine effective value via hierarchy
 					hostOverride, _ := services.GetHostDevopsOverride(r.Context(), host)
 					global, _ := services.GetAppSettingBool(r.Context(), "devops_apply")
@@ -112,7 +112,7 @@ func SetupDevopsRoutes(router chi.Router) {
 						d := common.EnvBool("DD_UI_DEVOPS_APPLY", "false")
 						global = &d
 					}
-					
+
 					effective := *global
 					inheritsFrom := "global"
 					if hostOverride != nil {
@@ -123,10 +123,10 @@ func SetupDevopsRoutes(router chi.Router) {
 						effective = *override
 						inheritsFrom = "stack"
 					}
-					
+
 					writeJSON(w, http.StatusOK, map[string]any{
-						"override": override, 
-						"effective": effective, 
+						"override": override,
+						"effective": effective,
 						"inherits_from": inheritsFrom,
 						"status": "ok",
 					})
@@ -147,7 +147,7 @@ func SetupDevopsRoutes(router chi.Router) {
 						http.Error(w, err.Error(), http.StatusBadRequest)
 						return
 					}
-					
+
 					// Return updated configuration
 					override, _ := services.GetStackDevopsOverride(r.Context(), "host", host, stackName)
 					hostOverride, _ := services.GetHostDevopsOverride(r.Context(), host)
@@ -156,7 +156,7 @@ func SetupDevopsRoutes(router chi.Router) {
 						d := common.EnvBool("DD_UI_DEVOPS_APPLY", "false")
 						global = &d
 					}
-					
+
 					effective := *global
 					inheritsFrom := "global"
 					if hostOverride != nil {
@@ -167,10 +167,10 @@ func SetupDevopsRoutes(router chi.Router) {
 						effective = *override
 						inheritsFrom = "stack"
 					}
-					
+
 					writeJSON(w, http.StatusOK, map[string]any{
-						"override": override, 
-						"effective": effective, 
+						"override": override,
+						"effective": effective,
 						"inherits_from": inheritsFrom,
 						"status": "ok",
 					})
@@ -225,8 +225,8 @@ func SetupDevopsRoutes(router chi.Router) {
 					effective = *override
 				}
 				writeJSON(w, http.StatusOK, map[string]any{
-					"override": override, 
-					"effective": effective, 
+					"override": override,
+					"effective": effective,
 					"inherits_from": "global",
 					"status": "ok",
 				})
@@ -243,7 +243,7 @@ func SetupDevopsRoutes(router chi.Router) {
 						http.Error(w, err.Error(), http.StatusNotFound)
 						return
 					}
-					
+
 					// Determine effective value via hierarchy
 					groupOverride, _ := services.GetGroupDevopsOverride(r.Context(), group)
 					global, _ := services.GetAppSettingBool(r.Context(), "devops_apply")
@@ -251,7 +251,7 @@ func SetupDevopsRoutes(router chi.Router) {
 						d := common.EnvBool("DD_UI_DEVOPS_APPLY", "false")
 						global = &d
 					}
-					
+
 					effective := *global
 					inheritsFrom := "global"
 					if groupOverride != nil {
@@ -262,10 +262,10 @@ func SetupDevopsRoutes(router chi.Router) {
 						effective = *override
 						inheritsFrom = "stack"
 					}
-					
+
 					writeJSON(w, http.StatusOK, map[string]any{
-						"override": override, 
-						"effective": effective, 
+						"override": override,
+						"effective": effective,
 						"inherits_from": inheritsFrom,
 						"status": "ok",
 					})
@@ -286,7 +286,7 @@ func SetupDevopsRoutes(router chi.Router) {
 						http.Error(w, err.Error(), http.StatusBadRequest)
 						return
 					}
-					
+
 					// Return updated configuration
 					override, _ := services.GetStackDevopsOverride(r.Context(), "group", group, stackName)
 					groupOverride, _ := services.GetGroupDevopsOverride(r.Context(), group)
@@ -295,7 +295,7 @@ func SetupDevopsRoutes(router chi.Router) {
 						d := common.EnvBool("DD_UI_DEVOPS_APPLY", "false")
 						global = &d
 					}
-					
+
 					effective := *global
 					inheritsFrom := "global"
 					if groupOverride != nil {
@@ -306,10 +306,10 @@ func SetupDevopsRoutes(router chi.Router) {
 						effective = *override
 						inheritsFrom = "stack"
 					}
-					
+
 					writeJSON(w, http.StatusOK, map[string]any{
-						"override": override, 
-						"effective": effective, 
+						"override": override,
+						"effective": effective,
 						"inherits_from": inheritsFrom,
 						"status": "ok",
 					})

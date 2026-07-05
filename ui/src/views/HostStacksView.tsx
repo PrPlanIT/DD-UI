@@ -60,14 +60,14 @@ import { handle401 } from "@/utils/auth";
 // Debounce helper to prevent excessive API calls
 function useDebounce<T extends (...args: any[]) => any>(func: T, delay: number): T {
   const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
-  
+
   return ((...args: Parameters<T>) => {
     if (timeoutId) clearTimeout(timeoutId);
-    
+
     const id = setTimeout(() => {
       func(...args);
     }, delay);
-    
+
     setTimeoutId(id);
   }) as T;
 }
@@ -118,7 +118,7 @@ export default function HostStacksView({
     });
     return Array.from(groupSet).sort();
   }, [hosts]);
-  
+
   // Extract unique tags from all hosts
   const allTags = React.useMemo(() => {
     const tagSet = new Set<string>();
@@ -151,12 +151,12 @@ export default function HostStacksView({
     // Fall back to the passed host prop
     return host.name || '';
   };
-  
+
   // Independent state for host and group selection
   const [selectedHost, setSelectedHost] = useState<string>(getInitialHost());
   const [selectedGroup, setSelectedGroup] = useState<string>(''); // Empty means no group filter
   const [activeSelector, setActiveSelector] = useState<'host' | 'group'>('host'); // Track which selector is active
-  
+
   // Derive viewMode from the combination of selectedHost, selectedGroup, and activeSelector
   const viewMode = React.useMemo((): PickerOption => {
     // Group selector is active and has a selection
@@ -176,7 +176,7 @@ export default function HostStacksView({
     // Just fall back to showing all hosts
     return { type: 'all', value: 'all', label: 'All' };
   }, [selectedHost, selectedGroup, activeSelector]);
-  
+
   // Sync selectedHost with localStorage when it changes
   useEffect(() => {
     if (selectedHost) {
@@ -190,7 +190,7 @@ export default function HostStacksView({
       localStorage.removeItem('dd_ui_selected_host');
     }
   }, [selectedHost, host.name, onHostChange]);
-  
+
   // Listen for localStorage changes from other views
   useEffect(() => {
     const checkStorage = () => {
@@ -203,13 +203,13 @@ export default function HostStacksView({
       }
       // Don't do anything if there's no saved host - let user control it
     };
-    
+
     // Check on mount and when returning to this view
     checkStorage();
-    
+
     // Listen for storage events (from other tabs)
     window.addEventListener('storage', checkStorage);
-    
+
     // Also check periodically when the tab is visible
     // BUT only if we haven't explicitly selected "All Hosts"
     const intervalId = setInterval(() => {
@@ -217,7 +217,7 @@ export default function HostStacksView({
         checkStorage();
       }
     }, 1000);
-    
+
     return () => {
       window.removeEventListener('storage', checkStorage);
       clearInterval(intervalId);
@@ -225,17 +225,17 @@ export default function HostStacksView({
   }, [hosts, selectedHost, activeSelector]);
   const [strictScope, setStrictScope] = useState<boolean>(false); // Show all stacks by default
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  
+
   // Sorting and filtering states
   const [sortBy, setSortBy] = useState<'host' | 'name' | 'created' | 'modified' | 'owner'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [filterState, setFilterState] = useState<string>(''); // empty means all
   const [filterOwner, setFilterOwner] = useState<string>(''); // empty means all
   const [filterAllowedUsers, setFilterAllowedUsers] = useState<string>(''); // empty means all
-  
+
   // Performance optimization: debounced sync to prevent excessive API calls
   const debouncedSync = useDebounce(onSync, 300);
-  
+
   // Performance optimizations
   const [lastSyncTime, setLastSyncTime] = useState(0);
   const [pendingContainerUpdates, setPendingContainerUpdates] = useState<Set<string>>(new Set());
@@ -282,7 +282,7 @@ export default function HostStacksView({
           return false;
         }
       }
-      
+
       // Apply state filter (only if not 'All States')
       if (filterState && filterState !== '') {
         const hasMatchingState = s.rows.some(r => {
@@ -295,21 +295,21 @@ export default function HostStacksView({
         });
         if (!hasMatchingState) return false;
       }
-      
+
       // Apply owner filter
       if (filterOwner) {
-        const hasMatchingOwner = s.rows.some(r => 
+        const hasMatchingOwner = s.rows.some(r =>
           (r.owner || '').toLowerCase().includes(filterOwner.toLowerCase())
         );
         if (!hasMatchingOwner) return false;
       }
-      
+
       // Apply allowed users filter (placeholder for now)
       if (filterAllowedUsers) {
         // This would need implementation based on host/group metadata
         // For now, don't filter by this
       }
-      
+
       // Hide stack cards if search is active and no containers match
       if (!hostQuery.trim()) return true;
       const matchingRows = s.rows.filter((r) => matchRow(r, hostQuery));
@@ -320,14 +320,14 @@ export default function HostStacksView({
       stacks: filteredStacks.length,
       containers: filteredStacks.reduce((sum, s) => {
         // Count only visible containers for each stack
-        const visibleContainers = hostQuery.trim() 
+        const visibleContainers = hostQuery.trim()
           ? s.rows.filter((r) => matchRow(r, hostQuery))
           : s.rows;
         return sum + visibleContainers.length;
       }, 0),
       drift: filteredStacks.filter(s => s.drift === 'drift').length,
       errors: filteredStacks.reduce((sum, s) => {
-        const visibleContainers = hostQuery.trim() 
+        const visibleContainers = hostQuery.trim()
           ? s.rows.filter((r) => matchRow(r, hostQuery))
           : s.rows;
         return sum + visibleContainers.filter(r => r.state === 'exited' || r.state === 'dead').length;
@@ -338,13 +338,13 @@ export default function HostStacksView({
   async function doCtrAction(ctr: string, action: string, targetHost?: string) {
     // Use provided targetHost or fall back to host.name
     const hostToUse = targetHost || host.name;
-    
+
     // Include host in the action key to differentiate containers with same name on different hosts
     const actionKey = `${hostToUse}-${ctr}-${action}`;
-    
+
     // Set loading state
     setActionLoading(prev => new Set(prev).add(actionKey));
-    
+
     try {
       const response = await fetch(
         `/api/containers/hosts/${encodeURIComponent(hostToUse)}/${encodeURIComponent(ctr)}/action`,
@@ -355,12 +355,12 @@ export default function HostStacksView({
           body: JSON.stringify({ action }),
         }
       );
-      
+
       if (response.status === 401) {
         handle401();
         return;
       }
-      
+
       if (!response.ok) {
         const errorText = await response.text().catch(() => "Action failed");
         throw new Error(errorText);
@@ -374,7 +374,7 @@ export default function HostStacksView({
 
       // Smart update: Only refresh container data, not full page sync
       await updateContainerStatus(ctr, action, hostToUse);
-      
+
     } catch (e) {
       // Show error notification
       setNotification({
@@ -394,17 +394,17 @@ export default function HostStacksView({
   function openLiveLogs(ctr: string, targetHost?: string) {
     setStreamLogs({ ctr, host: targetHost });
   }
-  
+
   // Helper function to create basic stacks from containers only (fast initial render)
   function createBasicStacksFromContainers(runtime: ApiContainer[], hostName?: string): MergedStack[] {
     const rtByStack = new Map<string, ApiContainer[]>();
-    
+
     for (const c of runtime) {
       const label = (c.compose_project || c.stack || "(none)").trim() || "(none)";
       if (!rtByStack.has(label)) rtByStack.set(label, []);
       rtByStack.get(label)!.push(c);
     }
-    
+
     return Array.from(rtByStack.entries()).map(([stackName, containers]) => {
       const rows: MergedRow[] = containers.map(c => {
         const portsLines = formatPortsLines((c as any).ports);
@@ -426,7 +426,7 @@ export default function HostStacksView({
           actualHost: hostName,
         } as any;
       });
-      
+
       return {
         name: stackName,
         drift: "unknown" as const,
@@ -447,26 +447,26 @@ export default function HostStacksView({
   async function updateContainerStatus(containerName: string, action?: string, targetHost?: string) {
     // Use provided targetHost or fall back to host.name
     const hostToUse = targetHost || host.name;
-    
+
     // Use host+container as the key to prevent duplicate updates for the same container ON THE SAME HOST
     const updateKey = `${hostToUse}-${containerName}`;
-    
+
     // Prevent duplicate updates for the same container on the same host
     if (pendingContainerUpdates.has(updateKey)) {
       debugLog(`[DD-UI] Skipping duplicate update for ${containerName} on ${hostToUse}`);
       return;
     }
-    
+
     setPendingContainerUpdates(prev => new Set(prev).add(updateKey));
-    
+
     try {
       const maxAttempts = 20;
       let attempts = 0;
       let lastState = '';
-      
+
       while (attempts < maxAttempts) {
         attempts++;
-        
+
         // Progressive delay: optimized for different action types
         let delay: number;
         if (action === 'pause' || action === 'unpause') {
@@ -477,38 +477,38 @@ export default function HostStacksView({
           delay = attempts <= 5 ? 400 : attempts <= 10 ? 1000 : 2000;
         }
         await new Promise(resolve => setTimeout(resolve, delay));
-        
+
         // Fetch container data
-        const response = await fetch(`/api/containers/hosts/${encodeURIComponent(hostToUse)}`, { 
-          credentials: "include" 
+        const response = await fetch(`/api/containers/hosts/${encodeURIComponent(hostToUse)}`, {
+          credentials: "include"
         });
-        
+
         if (response.status === 401) {
           handle401();
           return;
         }
-        
+
         if (!response.ok) {
           debugLog(`[DD-UI] Failed to fetch container data for ${containerName} (attempt ${attempts})`);
           continue;
         }
-        
+
         const data = await response.json();
         const updatedContainers: ApiContainer[] = data.containers || [];
         const updatedContainer = updatedContainers.find(c => c.name === containerName);
-        
+
         if (!updatedContainer) {
           debugLog(`[DD-UI] Container ${containerName} not found (attempt ${attempts})`);
           continue;
         }
-        
+
         const currentState = updatedContainer.state;
         const currentStatus = updatedContainer.status || '';
-        
+
         debugLog(`[DD-UI] Container ${containerName} polling (${attempts}/${maxAttempts}) for action '${action || 'unknown'}': ${currentState} | ${currentStatus}`);
-        
+
         // Always update the UI with current data - ONLY for the specific container on the specific host
-        setStacks(prevStacks => 
+        setStacks(prevStacks =>
           prevStacks.map(stack => ({ ...stack,
             rows: stack.rows.map(row => {
               // MUST check both container name AND host to avoid updating wrong containers
@@ -531,35 +531,35 @@ export default function HostStacksView({
             })
           }))
         );
-        
+
         // Stop polling conditions:
-        
+
         // 1. Final/stable states - stop immediately
-        if (currentState === 'running' || currentState === 'exited' || 
+        if (currentState === 'running' || currentState === 'exited' ||
             currentState === 'dead' || currentState === 'paused') {
           debugLog(`[DD-UI] Container ${containerName} reached stable state: ${currentState}`);
           break;
         }
-        
+
         // 2. No state change for 3+ consecutive checks - probably stable
         if (currentState === lastState && attempts >= 8) {
           debugLog(`[DD-UI] Container ${containerName} state unchanged for multiple checks: ${currentState}`);
           break;
         }
-        
+
         // 3. Clear transitioning states - keep polling
-        if (currentState === 'restarting' || currentState === 'removing' || 
+        if (currentState === 'restarting' || currentState === 'removing' ||
             currentStatus.toLowerCase().includes('starting')) {
           debugLog(`[DD-UI] Container ${containerName} still transitioning, continue polling...`);
         }
-        
+
         lastState = currentState;
       }
-      
+
       if (attempts >= maxAttempts) {
         debugLog(`[DD-UI] Container ${containerName} polling completed after max attempts`);
       }
-      
+
     } catch (error) {
       debugLog(`[DD-UI] Container status update failed for ${containerName} on ${hostToUse}:`, error);
     } finally {
@@ -573,16 +573,16 @@ export default function HostStacksView({
   }
 
   // Data loading happens automatically via the useEffect when dependencies change
-  
+
   useEffect(() => {
     debugLog('[DD-UI] HostStacksView useEffect starting, viewMode:', viewMode);
     let cancel = false;
-    
+
     // For group view, we need to fetch data differently
     const isGroupView = viewMode.type === 'group';
     const isAllView = viewMode.type === 'all';
     const scopeName = viewMode.type === 'group' ? viewMode.value.replace('group:', '') : host.name;
-    
+
     // Register view for polling boost (only for single host view)
     const registerView = async () => {
       if (viewMode.type !== 'host') return;
@@ -600,7 +600,7 @@ export default function HostStacksView({
         debugLog('[DD-UI] Failed to register view boost:', e);
       }
     };
-    
+
     // Unregister view for polling boost
     const unregisterView = async () => {
       if (viewMode.type !== 'host') return;
@@ -618,13 +618,13 @@ export default function HostStacksView({
         debugLog('[DD-UI] Failed to unregister view boost:', e);
       }
     };
-    
+
     registerView(); // Start view boost if needed
-    
+
     (async () => {
       setLoading(true);
       setErr(null);
-      
+
       // Declare variables at top level for use in common code
       let merged: MergedStack[] = [];
       let runtime: ApiContainer[] = [];
@@ -639,89 +639,89 @@ export default function HostStacksView({
           rendered_services?: Array<{ service_name: string; container_name?: string; image?: string }>;
         }
       >();
-      
+
       try {
         // Determine which hosts to fetch based on view mode and filters
         let hostsToFetch: Host[] = [];
-        
+
         if (isAllView) {
           // For All view, get all hosts (filtered by tags if applicable)
           debugLog('[DD-UI] All view - fetching all hosts');
-          
+
           // Build query params for host filtering
           const hostParams = new URLSearchParams();
           if (selectedTags.length > 0) {
             selectedTags.forEach(tag => hostParams.append('tags', tag));
           }
-          
+
           const hostsResponse = await fetch(`/api/hosts?${hostParams.toString()}`, { credentials: 'include' });
           if (hostsResponse.status === 401) {
             window.location.replace("/auth/login");
             return;
           }
-          
+
           if (hostsResponse.ok) {
             const hostsData = await hostsResponse.json();
             const items = Array.isArray(hostsData.items) ? hostsData.items : [];
-            hostsToFetch = items.map((h: any) => ({ 
-              name: h.name, 
-              address: h.addr ?? h.address ?? "", 
-              groups: h.groups ?? [] 
+            hostsToFetch = items.map((h: any) => ({
+              name: h.name,
+              address: h.addr ?? h.address ?? "",
+              groups: h.groups ?? []
             }));
           }
-          
+
           debugLog('[DD-UI] Will fetch data for', hostsToFetch.length, 'hosts');
-          
+
         } else if (isGroupView) {
           // For Group view, get hosts that are members of the group
           debugLog('[DD-UI] Group view - fetching hosts for group:', selectedGroup);
-          
-          const groupResponse = await fetch(`/api/groups/${encodeURIComponent(selectedGroup)}/hosts`, { 
-            credentials: 'include' 
+
+          const groupResponse = await fetch(`/api/groups/${encodeURIComponent(selectedGroup)}/hosts`, {
+            credentials: 'include'
           });
-          
+
           if (groupResponse.status === 401) {
             window.location.replace("/auth/login");
             return;
           }
-          
+
           if (groupResponse.ok) {
             const groupHosts = await groupResponse.json();
             // The response should be an array of host names
             const hostNames = Array.isArray(groupHosts) ? groupHosts : [];
-            
+
             // Now get the full host details for each
             if (hostNames.length > 0) {
               const allHostsResponse = await fetch('/api/hosts', { credentials: 'include' });
               if (allHostsResponse.ok) {
                 const allHostsData = await allHostsResponse.json();
                 const items = Array.isArray(allHostsData.items) ? allHostsData.items : [];
-                
+
                 // Filter to just the hosts in this group
                 hostsToFetch = items
                   .filter((h: any) => hostNames.includes(h.name))
-                  .map((h: any) => ({ 
-                    name: h.name, 
-                    address: h.addr ?? h.address ?? "", 
-                    groups: h.groups ?? [] 
+                  .map((h: any) => ({
+                    name: h.name,
+                    address: h.addr ?? h.address ?? "",
+                    groups: h.groups ?? []
                   }));
               }
             }
           }
-          
+
           debugLog('[DD-UI] Will fetch data for', hostsToFetch.length, 'group member hosts');
-          
+
         } else {
           // Single host view - just fetch that host
           const targetHost = selectedHost || host.name;
           hostsToFetch = [host];
           debugLog('[DD-UI] Single host view for:', targetHost);
         }
-        
+
         // Now fetch data symmetrically for all determined hosts
         if (hostsToFetch.length > 0) {
           debugLog('[DD-UI] Starting parallel data fetch for', hostsToFetch.length, 'hosts');
-          
+
           // Fetch container and IaC data for all hosts in parallel
           const hostDataPromises = hostsToFetch.map(async (fetchHost) => {
             try {
@@ -729,15 +729,15 @@ export default function HostStacksView({
                 fetch(`/api/containers/hosts/${encodeURIComponent(fetchHost.name)}`, { credentials: 'include' }),
                 fetch(`/api/iac/scopes/${encodeURIComponent(fetchHost.name)}`, { credentials: 'include' })
               ]);
-              
+
               if (containerResponse.status === 401 || iacResponse.status === 401) {
                 window.location.replace("/auth/login");
                 return null;
               }
-              
+
               const containerData = containerResponse.ok ? await containerResponse.json() : { containers: [] };
               const iacData = iacResponse.ok ? await iacResponse.json() : { stacks: [] };
-              
+
               return {
                 host: fetchHost,
                 containers: containerData.containers || [],
@@ -752,24 +752,24 @@ export default function HostStacksView({
               };
             }
           });
-          
+
           const allHostData = await Promise.all(hostDataPromises);
           const validHostData = allHostData.filter(d => d !== null);
-          
+
           debugLog('[DD-UI] Received data for', validHostData.length, 'hosts');
-          
+
           // Now merge all the data into our unified view
           const allStacks: MergedStack[] = [];
-          
+
           for (const hostData of validHostData) {
             if (!hostData) continue;
-            
+
             const { host: dataHost, containers, iacStacks: hostIacStacks } = hostData;
-            
+
             // Process this host's data using existing merge logic
             const hostRuntime = containers as ApiContainer[];
             const hostIac = hostIacStacks as IacStack[];
-            
+
             // Build enhanced map for this host
             const hostEnhanced = new Map<string, any>();
             for (const s of hostIac) {
@@ -788,10 +788,10 @@ export default function HostStacksView({
                 });
               }
             }
-            
+
             // Merge containers and IaC for this host
             const hostMerged = createBasicStacksFromContainers(hostRuntime, dataHost.name);
-            
+
             // Set default scope information for ALL stacks from this host
             for (const stack of hostMerged) {
               // Default scope is the host we're currently processing
@@ -800,7 +800,7 @@ export default function HostStacksView({
               // Track the actual physical host for Docker operations
               stack.actualHost = dataHost.name;
             }
-            
+
             // Enhance with IaC data
             for (const stack of hostMerged) {
               const iac = hostIac.find(i => i.name === stack.name);
@@ -813,13 +813,13 @@ export default function HostStacksView({
                 stack.sops = iac.sops_status === 'all';
                 stack.deployKind = iac.deploy_kind || 'compose';
                 stack.hasContent = iac.has_content || false;
-                
+
                 // Add scope information for All/Group views
                 stack.scopeKind = iac.scope_kind;
                 stack.scopeName = iac.scope_name || dataHost.name;
                 // Keep tracking the actual host (doesn't change even for group stacks)
                 stack.actualHost = dataHost.name;
-                
+
                 // Add drift info
                 const enh = hostEnhanced.get(stack.name);
                 if (enh) {
@@ -831,7 +831,7 @@ export default function HostStacksView({
                 }
               }
             }
-            
+
             // Add IaC stacks that have no runtime containers
             for (const iac of hostIac) {
               if (!hostMerged.find(s => s.name === iac.name)) {
@@ -855,15 +855,15 @@ export default function HostStacksView({
                 });
               }
             }
-            
+
             // Add all this host's stacks to our combined list
             allStacks.push(...hostMerged);
           }
-          
+
           // Set the final merged stacks
           merged = allStacks;
           setStacks(merged);
-          
+
           // Calculate metrics
           const metrics = {
             stacks: merged.length,
@@ -872,11 +872,11 @@ export default function HostStacksView({
             errors: merged.filter(s => s.rows.some(r => r.state === 'exited' || r.state === 'dead')).length,
           };
           setHostMetrics(metrics);
-          
+
           debugLog('[DD-UI] Metrics calculated:', metrics);
           debugLog('[DD-UI] Processed', merged.length, 'total stacks across all hosts');
           setLoading(false);
-          
+
         } else {
           // No hosts to fetch - show empty state
           setStacks([]);
@@ -890,13 +890,13 @@ export default function HostStacksView({
         if (!cancel) setLoading(false);
       }
     })();
-    
+
     return () => {
       cancel = true;
       unregisterView(); // End view boost
     };
   }, [host.name, viewMode, selectedTags, strictScope, selectedHost, selectedGroup]);
-  
+
   // No need for complex localStorage checking - host prop already handles it
 
 
@@ -904,9 +904,9 @@ export default function HostStacksView({
   useEffect(() => {
     // Only poll if we have loaded initial data
     if (loading || !stacks.length) return;
-    
+
     let pollInterval: NodeJS.Timeout;
-    
+
     const pollContainerData = async () => {
       try {
         // Get all unique actual hosts from the stacks
@@ -916,42 +916,42 @@ export default function HostStacksView({
             uniqueHosts.add(stack.actualHost);
           }
         });
-        
+
         // If no hosts found, fall back to current host
         if (uniqueHosts.size === 0) {
           uniqueHosts.add(host.name);
         }
-        
+
         debugLog('[DD-UI] Polling for container and IaC updates from hosts:', Array.from(uniqueHosts));
-        
+
         // Fetch containers AND IaC data from all actual hosts
         const containersByHost = new Map<string, ApiContainer[]>();
         const iacByHost = new Map<string, IacStack[]>();
-        
+
         for (const hostName of uniqueHosts) {
           try {
             // Fetch both containers and IaC data in parallel for each host
             const [containerResponse, iacResponse] = await Promise.all([
-              fetch(`/api/containers/hosts/${encodeURIComponent(hostName)}`, { 
-                credentials: "include" 
+              fetch(`/api/containers/hosts/${encodeURIComponent(hostName)}`, {
+                credentials: "include"
               }),
-              fetch(`/api/iac/scopes/${encodeURIComponent(hostName)}`, { 
-                credentials: "include" 
+              fetch(`/api/iac/scopes/${encodeURIComponent(hostName)}`, {
+                credentials: "include"
               })
             ]);
-            
+
             if (containerResponse.status === 401 || iacResponse.status === 401) {
               handle401();
               return;
             }
-            
+
             // Process container data
             if (containerResponse.ok) {
               const contJson = await containerResponse.json();
               const runtime: ApiContainer[] = (contJson.containers || []) as ApiContainer[];
               containersByHost.set(hostName, runtime);
             }
-            
+
             // Process IaC data for all IaC fields
             if (iacResponse.ok) {
               const iacJson = await iacResponse.json();
@@ -963,26 +963,26 @@ export default function HostStacksView({
             debugLog(`[DD-UI] Failed to poll host ${hostName}:`, err);
           }
         }
-        
+
         // Update container states AND all IaC fields in existing stacks
-        setStacks(prevStacks => 
+        setStacks(prevStacks =>
           prevStacks.map(stack => {
             // Get updated IaC data
             const stackHost = stack.actualHost || host.name;
             const hostIacData = iacByHost.get(stackHost);
             const updatedIac = hostIacData?.find(iac => iac.name === stack.name);
-            
+
             // Get all containers for this stack from the fetched data
             const hostContainers = containersByHost.get(stackHost) || [];
             const stackContainers = hostContainers.filter(c => {
               const containerStack = (c.compose_project || c.stack || "(none)").trim() || "(none)";
               return containerStack === stack.name;
             });
-            
+
             // Track existing container names for efficiency
             const existingRowNames = new Set(stack.rows.map(r => r.name));
             const currentContainerNames = new Set(stackContainers.map(c => c.name));
-            
+
             // Build updated rows: update existing, add new, remove deleted
             const updatedRows = [
               // Update existing containers that still exist
@@ -1021,7 +1021,7 @@ export default function HostStacksView({
                   } as MergedRow;
                 })
             ];
-            
+
             // Log if containers were added or removed
             if (updatedRows.length !== stack.rows.length) {
               const added = updatedRows.length - stack.rows.length;
@@ -1031,7 +1031,7 @@ export default function HostStacksView({
                 debugLog(`[DD-UI] Removed ${-added} container(s) from stack ${stack.name}`);
               }
             }
-            
+
             // If we found updated IaC data, update all IaC-related fields
             const updatedStack = {
               ...stack,
@@ -1049,11 +1049,11 @@ export default function HostStacksView({
               // Use the updated rows with new/removed containers handled
               rows: updatedRows
             };
-            
+
             if (updatedIac) {
               debugLog(`[DD-UI] Updated IaC fields for stack ${stack.name}: drift=${updatedStack.drift}, sops=${updatedStack.sops}, pullPolicy=${updatedStack.pullPolicy}, autoDevOps=${updatedStack.autoDevOps}`);
             }
-            
+
             return updatedStack;
           })
         );
@@ -1062,10 +1062,10 @@ export default function HostStacksView({
         debugLog('[DD-UI] Polling error:', error);
       }
     };
-    
+
     // Start polling every 2 seconds (frontend refresh rate)
     pollInterval = setInterval(pollContainerData, 2000);
-    
+
     return () => {
       if (pollInterval) clearInterval(pollInterval);
     };
@@ -1097,7 +1097,7 @@ export default function HostStacksView({
 
     // Add to deleting set to show loading state
     setDeletingStacks(prev => new Set(prev).add(index));
-    
+
     // Optimistically update UI immediately
     const originalStack = { ...s };
     setStacks((prev) =>
@@ -1116,22 +1116,22 @@ export default function HostStacksView({
     );
 
     try {
-      const r = await fetch(`/api/iac/scopes/${encodeURIComponent(s.scope_name || host.name)}/stacks/${encodeURIComponent(s.name)}`, { 
-        method: "DELETE", 
-        credentials: "include" 
+      const r = await fetch(`/api/iac/scopes/${encodeURIComponent(s.scope_name || host.name)}/stacks/${encodeURIComponent(s.name)}`, {
+        method: "DELETE",
+        credentials: "include"
       });
-      
+
       if (r.status === 401) {
         handle401();
         return;
       }
-      
+
       if (!r.ok) {
         // Revert optimistic update on failure
         setStacks((prev) =>
           prev.map((row, i) => i === index ? originalStack : row)
         );
-        
+
         // Show error notification (you might want to replace with a toast system)
         const errorMsg = r.status === 404 ? "Stack not found" : `Failed to delete: ${r.status} ${r.statusText}`;
         console.error("Stack deletion failed:", errorMsg);
@@ -1142,7 +1142,7 @@ export default function HostStacksView({
       setStacks((prev) =>
         prev.map((row, i) => i === index ? originalStack : row)
       );
-      
+
       console.error("Network error during stack deletion:", error);
       alert("Network error: Failed to delete stack. Please check your connection and try again.");
     } finally {
@@ -1233,7 +1233,7 @@ export default function HostStacksView({
 
       <div className="flex items-start gap-4 flex-wrap">
         <div className="text-lg font-semibold text-white self-center">Stacks</div>
-        
+
         {/* Host Filter Section */}
         <div className="flex flex-col gap-1 border-l border-slate-700 pl-4">
           <div className="flex items-center gap-2">
@@ -1268,7 +1268,7 @@ export default function HostStacksView({
             </label>
           </div>
         </div>
-        
+
         {/* Group Filter Section */}
         <div className="flex flex-col gap-1 border-l border-slate-700 pl-4">
           <div className="flex items-center gap-2">
@@ -1301,7 +1301,7 @@ export default function HostStacksView({
             </label>
           </div>
         </div>
-        
+
         {/* Tag Filter */}
         {allTags.length > 0 && (
           <div className="flex flex-col gap-1">
@@ -1343,7 +1343,7 @@ export default function HostStacksView({
             )}
           </div>
         )}
-        
+
         {/* Status metric cards for currently visible stacks */}
         <div className="flex items-center gap-2">
           {(() => {
@@ -1370,14 +1370,14 @@ export default function HostStacksView({
             );
           })()}
         </div>
-        
+
         {/* Toggles positioned at the end */}
         <div className="ml-auto flex items-center gap-3">
           <DevOpsToggle level="host" hostName={host.name} />
           <GitSyncToggle />
         </div>
       </div>
-      
+
       {/* Sort and Filter Controls */}
       <div className="flex items-center gap-3 mt-3 mb-1">
           {/* Sort By */}
@@ -1402,11 +1402,11 @@ export default function HostStacksView({
               {sortDirection === 'asc' ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
             </button>
           </div>
-          
+
           {/* Filter By */}
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-400">Filter By:</span>
-            
+
             {/* State Filter */}
             <select
               value={filterState}
@@ -1419,7 +1419,7 @@ export default function HostStacksView({
               <option value="paused">Paused</option>
               <option value="missing">Missing</option>
             </select>
-            
+
             {/* Owner Filter */}
             <input
               type="text"
@@ -1428,7 +1428,7 @@ export default function HostStacksView({
               onChange={(e) => setFilterOwner(e.target.value)}
               className="bg-slate-900 text-slate-200 border border-slate-700 rounded px-2 py-1 text-xs w-24"
             />
-            
+
             {/* Allowed Users Filter */}
             <input
               type="text"
@@ -1437,9 +1437,9 @@ export default function HostStacksView({
               onChange={(e) => setFilterAllowedUsers(e.target.value)}
               className="bg-slate-900 text-slate-200 border border-slate-700 rounded px-2 py-1 text-xs w-32"
             />
-            
+
             {/* Search, Sync, and New Stack moved here */}
-            <SearchBar 
+            <SearchBar
               value={hostQuery}
               onChange={setHostQuery}
               placeholder="Search stacks, services, containers..."
@@ -1450,13 +1450,13 @@ export default function HostStacksView({
                 <Loader2 className="h-3 w-3 mr-1 animate-spin" />
               ) : (
                 <RefreshCw className="h-3 w-3 mr-1" />
-              )} 
+              )}
               {loading ? "Syncing..." : "Sync"}
             </Button>
             <Button onClick={() => setShowNewStackDialog(true)} variant="outline" className="border-slate-700 text-slate-200 text-xs py-1 px-2">
               New Stack
             </Button>
-            
+
             {(filterState || filterOwner || filterAllowedUsers) && (
               <button
                 onClick={() => {
@@ -1471,7 +1471,7 @@ export default function HostStacksView({
             )}
           </div>
         </div>
-      
+
       <div className="text-xs text-slate-400 mt-1">Tip: click the stack title to open the full compare & editor view.</div>
 
       {loading && (
@@ -1504,8 +1504,8 @@ export default function HostStacksView({
                 <Card className="bg-slate-900/50 border-slate-800 rounded-xl">
                   <CardContent className="py-8 text-center">
                     <div className="text-slate-400">
-                      {viewMode.type === 'all' ? 
-                        'No stacks found across all hosts' : 
+                      {viewMode.type === 'all' ?
+                        'No stacks found across all hosts' :
                         `No stacks found for ${viewMode.label}`}
                     </div>
                     {err && (
@@ -1539,7 +1539,7 @@ export default function HostStacksView({
               return false;
             }
           }
-          
+
           // Apply state filter (only if not 'All States')
           if (filterState && filterState !== '') {
             const hasMatchingState = s.rows.some(r => {
@@ -1552,21 +1552,21 @@ export default function HostStacksView({
             });
             if (!hasMatchingState) return false;
           }
-          
+
           // Apply owner filter
           if (filterOwner) {
-            const hasMatchingOwner = s.rows.some(r => 
+            const hasMatchingOwner = s.rows.some(r =>
               (r.owner || '').toLowerCase().includes(filterOwner.toLowerCase())
             );
             if (!hasMatchingOwner) return false;
           }
-          
+
           // Apply allowed users filter (this would need to come from host/group metadata)
           // For now, this is a placeholder as allowed users aren't tracked at stack level
           if (filterAllowedUsers) {
             // TODO: Implement when allowed users data is available at stack level
           }
-          
+
           // Hide stack cards if search is active and no containers match
           if (!hostQuery.trim()) return true;
           const matchingRows = s.rows.filter((r) => matchRow(r, hostQuery));
@@ -1574,7 +1574,7 @@ export default function HostStacksView({
         })
         .sort((a, b) => {
           let compareValue = 0;
-          
+
           switch (sortBy) {
             case 'host':
               compareValue = (a.scopeName || '').localeCompare(b.scopeName || '');
@@ -1615,7 +1615,7 @@ export default function HostStacksView({
               compareValue = getOwner(a).localeCompare(getOwner(b));
               break;
           }
-          
+
           // Apply sort direction
           return sortDirection === 'asc' ? compareValue : -compareValue;
         })
@@ -1637,10 +1637,10 @@ export default function HostStacksView({
                 </button>
                 {/* Scope badge for mixed view */}
                 {viewMode.type === 'all' && (
-                  <Badge 
-                    variant="outline" 
-                    className={s.scopeKind === 'group' 
-                      ? "border-blue-600 bg-blue-900/20 text-blue-300" 
+                  <Badge
+                    variant="outline"
+                    className={s.scopeKind === 'group'
+                      ? "border-blue-600 bg-blue-900/20 text-blue-300"
                       : "border-green-600 bg-green-900/20 text-green-300"}
                   >
                     {s.scopeKind === 'group' ? (
@@ -1675,8 +1675,8 @@ export default function HostStacksView({
                   <Badge variant="outline" className="border-slate-700 text-slate-300">No IaC</Badge>
                 )}
                 {s.iacId && (
-                  <button 
-                    title="Delete IaC for this stack" 
+                  <button
+                    title="Delete IaC for this stack"
                     onClick={() => deleteStackAt(idx)}
                     disabled={deletingStacks.has(idx)}
                     className={`h-[22px] w-[22px] flex items-center justify-center bg-slate-900/80 border border-slate-700 rounded-full hover:bg-rose-900/40 hover:border-rose-700 transition-colors ${deletingStacks.has(idx) ? "opacity-50" : ""}`}
@@ -1762,15 +1762,15 @@ export default function HostStacksView({
                           </td>
                           <td className="px-2 py-1.5 text-slate-300 align-top min-w-[60px]">
                             <div className="truncate">
-                              <PortLinks 
-                                ports={r.ports || []} 
+                              <PortLinks
+                                ports={r.ports || []}
                                 hostAddress={
                                   // In unified view, use the container's actual host
-                                  (r as any).actualHost ? 
+                                  (r as any).actualHost ?
                                     (hosts.find(h => h.name === (r as any).actualHost)?.address || (r as any).actualHost) :
                                   // Fall back to stack scope or current host
-                                  s.scopeName ? 
-                                    (hosts.find(h => h.name === s.scopeName)?.address || s.scopeName) : 
+                                  s.scopeName ?
+                                    (hosts.find(h => h.name === s.scopeName)?.address || s.scopeName) :
                                     (host.address || host.name)
                                 }
                                 className="leading-tight"
@@ -1798,19 +1798,19 @@ export default function HostStacksView({
                                 <>
                                   {/* Group 1: Container Lifecycle (stop/start, restart, pause/resume) */}
                                   {!isRunning && !isPaused && (
-                                    <ActionBtn 
-                                      title="Start" 
-                                      icon={Play} 
-                                      color="green" 
+                                    <ActionBtn
+                                      title="Start"
+                                      icon={Play}
+                                      color="green"
                                       onClick={() => doCtrAction(r.name, "start", (r as any).actualHost || (r as any).hostName || undefined)}
                                       loading={actionLoading.has(`${(r as any).actualHost || (r as any).hostName || host.name}-${r.name}-start`)}
                                     />
                                   )}
                                   {isRunning && (
-                                    <ActionBtn 
-                                      title="Stop" 
-                                      icon={Square} 
-                                      color="yellow" 
+                                    <ActionBtn
+                                      title="Stop"
+                                      icon={Square}
+                                      color="yellow"
                                       onClick={() => doCtrAction(r.name, "stop", (r as any).actualHost || (r as any).hostName || undefined)}
                                       loading={actionLoading.has(`${(r as any).actualHost || (r as any).hostName || host.name}-${r.name}-stop`)}
                                     />
@@ -1825,10 +1825,10 @@ export default function HostStacksView({
                                     />
                                   )}
                                   {isRunning && !isPaused && (
-                                    <ActionBtn 
-                                      title="Pause" 
-                                      icon={Pause} 
-                                      color="yellow" 
+                                    <ActionBtn
+                                      title="Pause"
+                                      icon={Pause}
+                                      color="yellow"
                                       onClick={() => doCtrAction(r.name, "pause", (r as any).actualHost || (r as any).hostName || undefined)}
                                       loading={actionLoading.has(`${(r as any).actualHost || (r as any).hostName || host.name}-${r.name}-pause`)}
                                     />
@@ -1843,19 +1843,19 @@ export default function HostStacksView({
                                     />
                                   )}
 
-                                  
+
                                   {/* Group 2: Destructive Actions (kill, remove) */}
-                                  <ActionBtn 
-                                    title="Kill" 
-                                    icon={ZapOff} 
-                                    color="red" 
+                                  <ActionBtn
+                                    title="Kill"
+                                    icon={ZapOff}
+                                    color="red"
                                     onClick={() => doCtrAction(r.name, "kill", (r as any).actualHost || (r as any).hostName || undefined)}
                                     loading={actionLoading.has(`${(r as any).actualHost || (r as any).hostName || host.name}-${r.name}-kill`)}
                                   />
-                                  <ActionBtn 
-                                    title="Remove" 
-                                    icon={Trash2} 
-                                    color="red" 
+                                  <ActionBtn
+                                    title="Remove"
+                                    icon={Trash2}
+                                    color="red"
                                     onClick={() => doCtrAction(r.name, "remove", (r as any).actualHost || (r as any).hostName || undefined)}
                                     loading={actionLoading.has(`${(r as any).actualHost || (r as any).hostName || host.name}-${r.name}-remove`)}
                                   />

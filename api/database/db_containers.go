@@ -103,14 +103,14 @@ func GetContainerByHostAndName(ctx context.Context, hostName, containerName stri
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var (
 		cr                  ContainerRow
 		portsB, labelsB     []byte
 		envB, nwB, mountsB  []byte
 		projectFromStack    *string
 	)
-	
+
 	err = common.DB.QueryRow(ctx, `
 		SELECT
 		  c.id, c.host_id, c.stack_id, c.container_id, c.name, c.image, c.state, c.status,
@@ -126,17 +126,17 @@ func GetContainerByHostAndName(ctx context.Context, hostName, containerName stri
 		&portsB, &labelsB, &envB, &nwB, &mountsB, &cr.IPAddr, &cr.CreatedTS,
 		&projectFromStack, &cr.Owner, &cr.UpdatedAt,
 	)
-	
+
 	if err != nil {
 		return nil, err
 	}
-	
+
 	_ = json.Unmarshal(portsB, &cr.Ports)
 	_ = json.Unmarshal(labelsB, &cr.Labels)
 	_ = json.Unmarshal(envB, &cr.Env)
 	_ = json.Unmarshal(nwB, &cr.Networks)
 	_ = json.Unmarshal(mountsB, &cr.Mounts)
-	
+
 	// Derive compose metadata
 	if projectFromStack != nil && *projectFromStack != "" {
 		cr.ComposeProj = *projectFromStack
@@ -150,7 +150,7 @@ func GetContainerByHostAndName(ctx context.Context, hostName, containerName stri
 			cr.ComposeSvc = ls
 		}
 	}
-	
+
 	// Add health from labels if available
 	if cr.Labels != nil {
 		if health, ok := cr.Labels["com.docker.compose.health"]; ok {
@@ -159,7 +159,7 @@ func GetContainerByHostAndName(ctx context.Context, hostName, containerName stri
 			cr.Health = health
 		}
 	}
-	
+
 	return &cr, nil
 }
 

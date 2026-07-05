@@ -6,12 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import HostPicker from "@/components/HostPicker";
-import { 
-  Trash2, 
-  HardDrive, 
-  Package, 
-  Container, 
-  Network, 
+import {
+  Trash2,
+  HardDrive,
+  Package,
+  Container,
+  Network,
   Database,
   AlertTriangle,
   CheckCircle,
@@ -129,7 +129,7 @@ export default function CleanupView({
 }) {
   const { hostName: urlHostName } = useParams<{ hostName: string }>();
   const navigate = useNavigate();
-  
+
   // Get host from URL parameter, fallback to localStorage, then first host
   const getInitialHost = () => {
     if (urlHostName) return decodeURIComponent(urlHostName);
@@ -137,7 +137,7 @@ export default function CleanupView({
     if (saved && hosts.some(h => h.name === saved)) return saved;
     return hosts.length > 0 ? hosts[0].name : '';
   };
-  
+
   const [selectedHost, setSelectedHost] = useState<string>('');
   const [allHosts, setAllHosts] = useState(false);
   const [dryRun, setDryRun] = useState(true);
@@ -147,7 +147,7 @@ export default function CleanupView({
   const [previewLoading, setPreviewLoading] = useState<Record<string, boolean>>({});
   const [cleanupEvents, setCleanupEvents] = useState<Array<{id: string, time: Date, message: string, type: 'info' | 'success' | 'warning' | 'error' | 'progress'}>>([]);
   const [showEvents, setShowEvents] = useState(false);
-  
+
   // Initialize selected host from URL or saved preference
   useEffect(() => {
     if (hosts.length > 0) {
@@ -157,7 +157,7 @@ export default function CleanupView({
       }
     }
   }, [hosts, urlHostName]);
-  
+
   // Handle host selection change
   const handleHostChange = (newHost: string) => {
     setSelectedHost(newHost);
@@ -186,37 +186,37 @@ export default function CleanupView({
   // Fetch space preview for an operation
   const fetchSpacePreview = async (operation: CleanupOperation) => {
     const cacheKey = allHosts ? `${operation}-all-hosts` : `${operation}-${selectedHost}`;
-    
+
     if (previewLoading[cacheKey]) return;
-    
+
     setPreviewLoading(prev => ({ ...prev, [cacheKey]: true }));
     addEvent(`Starting preview analysis for ${operation}...`, 'info');
-    
+
     try {
       const endpoint = allHosts  ? `/api/cleanup/global/preview/${operation}` : `/api/cleanup/hosts/${encodeURIComponent(selectedHost)}/preview/${operation}`;
-      
+
       const response = await fetch(endpoint, {
         credentials: 'include'
       });
-      
+
       if (response.status === 401) {
         handle401();
         return;
       }
-      
+
       if (response.ok) {
         const preview = await response.json();
         setSpacePreviews(prev => ({ ...prev, [cacheKey]: preview }));
-        
+
         // Add detailed event about what was found
         const itemSummary = Object.entries(preview.item_count || {}) .filter(([_, count]) => count > 0) .map(([key, count]) => `${count} ${key}`) .join(', ');
-        
+
         if (itemSummary) {
           addEvent(`Preview complete: Found ${itemSummary} (${preview.estimated_size || '0B'} total)`, 'success');
         } else {
           addEvent(`Preview complete: Nothing to clean for ${operation}`, 'success');
         }
-        
+
         // Add details if available
         if (preview.details && preview.details.length > 0) {
           preview.details.slice(0, 5).forEach(detail => {
@@ -240,10 +240,10 @@ export default function CleanupView({
   // Fetch all previews when host or mode changes
   useEffect(() => {
     if (!selectedHost && !allHosts) return;
-    
+
     // Clear existing previews first
     setSpacePreviews({});
-    
+
     // Fetch preview for each operation
     const operations: CleanupOperation[] = ['system', 'images', 'containers', 'volumes', 'networks', 'build-cache'];
     operations.forEach(op => {
@@ -301,7 +301,7 @@ export default function CleanupView({
       addEvent(`✅ Cleanup job ${job.id.slice(0, 8)} started`, 'success');
       addEvent(`🚀 Executing ${operation} cleanup...`, 'info');
       monitorJob(job.id);
-      
+
     } catch (error) {
       console.error('Cleanup failed:', error);
       addEvent(`Cleanup failed: ${error}`, 'error');
@@ -312,29 +312,29 @@ export default function CleanupView({
 
   const monitorJob = async (jobId: string) => {
     addEvent(`Starting cleanup job monitor for ${jobId.slice(0, 8)}...`, 'info');
-    
+
     // Small delay to ensure backend job is ready
     await new Promise(resolve => setTimeout(resolve, 100));
-    
+
     const eventSource = new EventSource(`/api/cleanup/jobs/${jobId}/stream`);
     let hasReceivedData = false;
-    
+
     eventSource.onmessage = (event) => {
       hasReceivedData = true;
       debugLog('SSE onmessage received:', { type: event.type, data: event.data });
-      
+
       // The default message event handler
       try {
         const data = JSON.parse(event.data);
         debugLog('Parsed SSE data:', data);
-        
+
         // Handle job progress updates
         if (data.progress && typeof data.progress === 'object') {
           const progress = data.progress as any;
           if (progress.message && !progress.message.includes('heartbeat')) {
             // Only show the message if it's new or different
-            addEvent(progress.message, 
-              progress.phase === 'completed' ? 'success' : 
+            addEvent(progress.message,
+              progress.phase === 'completed' ? 'success' :
               progress.phase === 'failed' ? 'error' : 'progress'
             );
           }
@@ -357,7 +357,7 @@ export default function CleanupView({
       debugLog('SSE complete event received:', event.data);
       const job: CleanupJob = JSON.parse(event.data);
       setJobHistory(prev => [job, ...prev.slice(0, 9)]); // Keep last 10 jobs
-      
+
       // Add completion event with results
       if (job.results && typeof job.results === 'object') {
         const results = job.results as any;
@@ -366,7 +366,7 @@ export default function CleanupView({
         } else {
           addEvent(`✅ Cleanup job ${jobId.slice(0, 8)} completed`, 'success');
         }
-        
+
         // Add summary of what was removed
         if (results.removed) {
           Object.entries(results.removed).forEach(([key, value]) => {
@@ -378,7 +378,7 @@ export default function CleanupView({
       } else {
         addEvent(`✅ Cleanup job ${jobId.slice(0, 8)} completed`, 'success');
       }
-      
+
       // Refresh the preview for the operation that was just cleaned
       if (job.operation) {
         // Map operation names to cleanup operation types
@@ -403,35 +403,35 @@ export default function CleanupView({
             operationType = 'build-cache';
             break;
         }
-        
+
         if (operationType) {
           addEvent('Refreshing preview data...', 'info');
           fetchSpacePreview(operationType);
         }
       }
-      
+
       eventSource.close();
     });
-    
+
     // Add handler for connection established
     eventSource.addEventListener('connected', (event) => {
       debugLog('SSE connected event received:', event.data);
       hasReceivedData = true;
     });
-    
+
     // Add handlers for other SSE event types
     eventSource.addEventListener('progress', (event) => {
       debugLog('SSE progress event received:', event.data);
       hasReceivedData = true;
       try {
         const data = JSON.parse(event.data);
-        
+
         // Handle progress field if present
         if (data.progress && typeof data.progress === 'object') {
           const progress = data.progress as any;
           if (progress.message) {
-            addEvent(progress.message, 
-              progress.phase === 'completed' ? 'success' : 
+            addEvent(progress.message,
+              progress.phase === 'completed' ? 'success' :
               progress.phase === 'failed' ? 'error' : 'progress'
             );
           }
@@ -443,7 +443,7 @@ export default function CleanupView({
         debugLog('Failed to parse progress event:', e);
       }
     });
-    
+
     eventSource.addEventListener('info', (event) => {
       debugLog('SSE info event received:', event.data);
       try {
@@ -517,10 +517,10 @@ export default function CleanupView({
                   <span className="text-sm text-slate-300">All Hosts</span>
                 </div>
                 {!allHosts && (
-                  <HostPicker 
-                    hosts={hosts} 
-                    activeHost={selectedHost} 
-                    setActiveHost={handleHostChange} 
+                  <HostPicker
+                    hosts={hosts}
+                    activeHost={selectedHost}
+                    setActiveHost={handleHostChange}
                   />
                 )}
               </div>
@@ -548,7 +548,7 @@ export default function CleanupView({
       {cleanupEvents.length > 0 && (
         <Card className="bg-slate-900/50 border-slate-800">
           <CardContent className="p-4">
-            <div 
+            <div
               className="flex items-center justify-between cursor-pointer"
               onClick={() => setShowEvents(!showEvents)}
             >
@@ -565,11 +565,11 @@ export default function CleanupView({
                 <ChevronDown className="h-4 w-4 text-slate-400" />
               )}
             </div>
-            
+
             {showEvents && (
               <div className="mt-3 space-y-1 max-h-64 overflow-y-auto">
                 {cleanupEvents.map(event => (
-                  <div 
+                  <div
                     key={event.id}
                     className={`text-xs font-mono p-2 rounded ${
                       event.type === 'error' ? 'bg-red-900/20 text-red-300' :
@@ -587,7 +587,7 @@ export default function CleanupView({
                 ))}
               </div>
             )}
-            
+
             {showEvents && cleanupEvents.length > 0 && (
               <Button
                 variant="ghost"

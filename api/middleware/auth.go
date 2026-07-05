@@ -27,7 +27,7 @@ const UserKey ctxKey = "ddui.user"
 func RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		common.DebugLog("AUTH MIDDLEWARE: Checking auth for %s %s", r.Method, r.URL.Path)
-		
+
 		if common.SessionManager == nil {
 			common.ErrorLog("AUTH MIDDLEWARE: SessionManager is nil!")
 			w.Header().Set("Content-Type", "application/json")
@@ -38,13 +38,13 @@ func RequireAuth(next http.Handler) http.Handler {
 			})
 			return
 		}
-		
+
 		common.DebugLog("AUTH MIDDLEWARE: SessionManager exists, getting user from context")
 		u, ok := common.SessionManager.Get(r.Context(), "user").(User)
 		exp := common.SessionManager.GetInt64(r.Context(), "exp")
-		
+
 		common.DebugLog("AUTH MIDDLEWARE: User found: %v, Exp: %d, Current time: %d", ok, exp, time.Now().Unix())
-		
+
 		if !ok || time.Now().Unix() > exp {
 			common.WarnLog("AUTH MIDDLEWARE: Access denied - user: %v, expired: %v", ok, time.Now().Unix() > exp)
 			w.Header().Set("Content-Type", "application/json")
@@ -55,7 +55,7 @@ func RequireAuth(next http.Handler) http.Handler {
 			})
 			return
 		}
-		
+
 		common.DebugLog("AUTH MIDDLEWARE: Access granted for user: %s", u.Email)
 		ctx := context.WithValue(r.Context(), UserKey, u)
 		next.ServeHTTP(w, r.WithContext(ctx))

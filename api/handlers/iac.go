@@ -22,7 +22,7 @@ import (
 // setupIacRoutes sets up all Infrastructure as Code (IAC) related routes
 // This organizes the extensive IAC functionality from web.go into logical groups:
 // - Host-scoped IAC endpoints
-// - Group-scoped IAC endpoints  
+// - Group-scoped IAC endpoints
 // - Stack-scoped IAC endpoints (CRUD, files, deployment)
 // - Batch operations and scanning
 func SetupIacRoutes(router chi.Router) {
@@ -32,15 +32,15 @@ func SetupIacRoutes(router chi.Router) {
 			r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 				scopeName := chi.URLParam(r, "scopename")
 				common.DebugLog("IAC request for scope: %s", scopeName)
-				
+
 				// Determine if this is a host or group
 				invMgr := services.GetInventoryManager()
 				hosts, _ := invMgr.GetHosts()
 				groups, _ := invMgr.GetGroups()
-				
+
 				var isHost bool
 				var targetGroup *services.InventoryGroup
-				
+
 				// Check if it's a host
 				for _, h := range hosts {
 					if h.Name == scopeName {
@@ -48,7 +48,7 @@ func SetupIacRoutes(router chi.Router) {
 						break
 					}
 				}
-				
+
 				// Check if it's a group
 				if !isHost {
 					for _, g := range groups {
@@ -58,17 +58,17 @@ func SetupIacRoutes(router chi.Router) {
 						}
 					}
 				}
-				
+
 				if !isHost && targetGroup == nil {
 					http.Error(w, "Scope not found", http.StatusNotFound)
 					return
 				}
-				
+
 				// If it's a host, return host-scoped stacks
 				if isHost {
 					// Check if cached data is requested
 					useCached := r.URL.Query().Get("cached") == "true"
-					
+
 					// If not using cached, trigger IaC scan to get fresh file data
 					if !useCached {
 						_, _, scanErr := services.ScanIacLocal(r.Context())
@@ -77,14 +77,14 @@ func SetupIacRoutes(router chi.Router) {
 							// Continue with cached data if scan fails
 						}
 					}
-					
+
 					items, err := services.ListEnhancedIacStacksForHost(r.Context(), scopeName)
 					if err != nil {
 						common.DebugLog("Failed to get stacks for host %s: %v", scopeName, err)
 						http.Error(w, err.Error(), http.StatusBadRequest)
 						return
 					}
-					
+
 					// Filter to only host-scoped stacks
 					filtered := make([]services.EnhancedIacStackOut, 0)
 					for _, stack := range items {
@@ -92,7 +92,7 @@ func SetupIacRoutes(router chi.Router) {
 							filtered = append(filtered, stack)
 						}
 					}
-					
+
 					common.DebugLog("Returning %d host-scoped stacks for %s", len(filtered), scopeName)
 					writeJSON(w, http.StatusOK, map[string]any{
 						"stacks": filtered,
@@ -101,13 +101,13 @@ func SetupIacRoutes(router chi.Router) {
 					})
 					return
 				}
-				
+
 				// If it's a group, collect group-scoped stacks from all member hosts
 				stackMap := make(map[string]services.EnhancedIacStackOut)
-				
+
 				// Check if cached data is requested
 				useCached := r.URL.Query().Get("cached") == "true"
-				
+
 				// If not using cached, trigger IaC scan to get fresh file data
 				if !useCached {
 					_, _, scanErr := services.ScanIacLocal(r.Context())
@@ -116,14 +116,14 @@ func SetupIacRoutes(router chi.Router) {
 						// Continue with cached data if scan fails
 					}
 				}
-				
+
 				for _, hostName := range targetGroup.Hosts {
 					items, err := services.ListEnhancedIacStacksForHost(r.Context(), hostName)
 					if err != nil {
 						common.DebugLog("Failed to get stacks for host %s in group %s: %v", hostName, scopeName, err)
 						continue
 					}
-					
+
 					// Filter to only group-scoped stacks for this group
 					for _, stack := range items {
 						if stack.ScopeKind == "group" && stack.ScopeName == scopeName {
@@ -138,13 +138,13 @@ func SetupIacRoutes(router chi.Router) {
 						}
 					}
 				}
-				
+
 				// Convert map to slice
 				result := make([]services.EnhancedIacStackOut, 0, len(stackMap))
 				for _, stack := range stackMap {
 					result = append(result, stack)
 				}
-				
+
 				common.DebugLog("Returning %d group-scoped stacks for %s", len(result), scopeName)
 				writeJSON(w, http.StatusOK, map[string]any{
 					"stacks": result,
@@ -153,11 +153,11 @@ func SetupIacRoutes(router chi.Router) {
 					"member_hosts": targetGroup.Hosts,
 				})
 			})
-			
+
 			// Create stack for this scope (host or group)
 			r.Post("/stacks", func(w http.ResponseWriter, r *http.Request) {
 				scopeName := chi.URLParam(r, "scopename")
-				
+
 				var body struct {
 					StackName  string `json:"stack_name"`
 					IacEnabled bool   `json:"iac_enabled"`
@@ -166,11 +166,11 @@ func SetupIacRoutes(router chi.Router) {
 					http.Error(w, "bad json", http.StatusBadRequest)
 					return
 				}
-				
+
 				// Determine scope kind
 				invMgr := services.GetInventoryManager()
 				hosts, _ := invMgr.GetHosts()
-				
+
 				scopeKind := ""
 				for _, h := range hosts {
 					if h.Name == scopeName {
@@ -178,7 +178,7 @@ func SetupIacRoutes(router chi.Router) {
 						break
 					}
 				}
-				
+
 				// If not found in hosts, check groups
 				if scopeKind == "" {
 					groups, _ := invMgr.GetGroups()
@@ -189,12 +189,12 @@ func SetupIacRoutes(router chi.Router) {
 						}
 					}
 				}
-				
+
 				if scopeKind == "" {
 					http.Error(w, "Scope not found", http.StatusNotFound)
 					return
 				}
-				
+
 				// Create the stack with appropriate scope
 				ctx := r.Context()
 				id, err := services.CreateIacStack(ctx, scopeKind, scopeName, body.StackName, body.IacEnabled)
@@ -202,39 +202,39 @@ func SetupIacRoutes(router chi.Router) {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
-				
+
 				writeJSON(w, http.StatusOK, map[string]any{"id": id, "created": true})
 			})
-			
+
 			// Stack-specific hierarchical endpoints
 			r.Route("/stacks/{stackname}", func(r chi.Router) {
 				// Get stack details
 				r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 					scopeName := chi.URLParam(r, "scopename")
 					stackname := chi.URLParam(r, "stackname")
-					
+
 					stackID, err := services.GetStackIDByHostAndName(r.Context(), scopeName, stackname)
 					if err != nil {
 						http.Error(w, "Stack not found", http.StatusNotFound)
 						return
 					}
-					
+
 					// Get stack details
 					var stack services.IacStackRow
 					var autoApplyOverride *bool
 					var updatedAt time.Time
 					err = common.DB.QueryRow(r.Context(), `
-						SELECT id, repo_id, scope_kind, scope_name, name, rel_path, iac_enabled, 
+						SELECT id, repo_id, scope_kind, scope_name, name, rel_path, iac_enabled,
 						       deploy_kind, auto_apply_override, updated_at
 						FROM iac_stacks WHERE id=$1
-					`, stackID).Scan(&stack.ID, &stack.RepoID, &stack.ScopeKind, &stack.ScopeName, 
-						&stack.StackName, &stack.RelPath, &stack.IacEnabled, &stack.DeployKind, 
+					`, stackID).Scan(&stack.ID, &stack.RepoID, &stack.ScopeKind, &stack.ScopeName,
+						&stack.StackName, &stack.RelPath, &stack.IacEnabled, &stack.DeployKind,
 						&autoApplyOverride, &updatedAt)
 					if err != nil {
 						http.Error(w, err.Error(), http.StatusBadRequest)
 						return
 					}
-					
+
 					// Add extra fields to response
 					response := map[string]any{
 						"stack": stack,
@@ -243,18 +243,18 @@ func SetupIacRoutes(router chi.Router) {
 					}
 					writeJSON(w, http.StatusOK, response)
 				})
-				
+
 				// Update stack settings
 				r.Patch("/", func(w http.ResponseWriter, r *http.Request) {
 					scopeName := chi.URLParam(r, "scopename")
 					stackname := chi.URLParam(r, "stackname")
-					
+
 					stackID, err := services.GetStackIDByHostAndName(r.Context(), scopeName, stackname)
 					if err != nil {
 						http.Error(w, "Stack not found", http.StatusNotFound)
 						return
 					}
-					
+
 					var body struct {
 						IacEnabled        *bool   `json:"iac_enabled,omitempty"`
 						AutoApplyOverride *bool   `json:"auto_apply_override,omitempty"`
@@ -264,10 +264,10 @@ func SetupIacRoutes(router chi.Router) {
 						http.Error(w, "bad json", http.StatusBadRequest)
 						return
 					}
-					
+
 					// Update fields if provided
 					if body.IacEnabled != nil {
-						_, err = common.DB.Exec(r.Context(), 
+						_, err = common.DB.Exec(r.Context(),
 							`UPDATE iac_stacks SET iac_enabled=$1, updated_at=now() WHERE id=$2`,
 							*body.IacEnabled, stackID)
 						if err != nil {
@@ -275,7 +275,7 @@ func SetupIacRoutes(router chi.Router) {
 							return
 						}
 					}
-					
+
 					if body.AutoApplyOverride != nil {
 						_, err = common.DB.Exec(r.Context(),
 							`UPDATE iac_stacks SET auto_apply_override=$1, updated_at=now() WHERE id=$2`,
@@ -285,7 +285,7 @@ func SetupIacRoutes(router chi.Router) {
 							return
 						}
 					}
-					
+
 					if body.DeployKind != nil {
 						_, err = common.DB.Exec(r.Context(),
 							`UPDATE iac_stacks SET deploy_kind=$1, updated_at=now() WHERE id=$2`,
@@ -295,42 +295,42 @@ func SetupIacRoutes(router chi.Router) {
 							return
 						}
 					}
-					
+
 					writeJSON(w, http.StatusOK, map[string]any{"updated": true})
 				})
-				
+
 				// Delete stack
 				r.Delete("/", func(w http.ResponseWriter, r *http.Request) {
 					scopeName := chi.URLParam(r, "scopename")
 					stackname := chi.URLParam(r, "stackname")
-					
+
 					stackID, err := services.GetStackIDByHostAndName(r.Context(), scopeName, stackname)
 					if err != nil {
 						http.Error(w, "Stack not found", http.StatusNotFound)
 						return
 					}
-					
+
 					// Delete the stack
 					if _, err := common.DB.Exec(r.Context(), `DELETE FROM iac_stacks WHERE id=$1`, stackID); err != nil {
 						http.Error(w, err.Error(), http.StatusBadRequest)
 						return
 					}
-					
+
 					writeJSON(w, http.StatusOK, map[string]any{"deleted": true})
 				})
-				
+
 				// Get stack files
 				r.Get("/files", func(w http.ResponseWriter, r *http.Request) {
 					scopeName := chi.URLParam(r, "scopename")
 					stackname := chi.URLParam(r, "stackname")
-					
+
 					// Find the stack ID from host and stack name
 					stackID, err := services.GetStackIDByHostAndName(r.Context(), scopeName, stackname)
 					if err != nil {
 						http.Error(w, "Stack not found", http.StatusNotFound)
 						return
 					}
-					
+
 					items, err := services.ListFilesForStack(r.Context(), stackID)
 					if err != nil {
 						http.Error(w, err.Error(), http.StatusBadRequest)
@@ -338,7 +338,7 @@ func SetupIacRoutes(router chi.Router) {
 					}
 					writeJSON(w, http.StatusOK, map[string]any{"files": items})
 				})
-				
+
 				// Get file content
 				r.Get("/file", func(w http.ResponseWriter, r *http.Request) {
 					scopeName := chi.URLParam(r, "scopename")
@@ -348,28 +348,28 @@ func SetupIacRoutes(router chi.Router) {
 						http.Error(w, "missing path", http.StatusBadRequest)
 						return
 					}
-					
+
 					stackID, err := services.GetStackIDByHostAndName(r.Context(), scopeName, stackname)
 					if err != nil {
 						http.Error(w, "Stack not found", http.StatusNotFound)
 						return
 					}
-					
+
 					// Get the file content using the existing logic
 					root, err := services.GetRepoRootForStack(r.Context(), stackID)
 					if err != nil {
 						http.Error(w, err.Error(), http.StatusBadRequest)
 						return
 					}
-					
+
 					full, err := services.JoinUnder(root, rel)
 					if err != nil {
 						http.Error(w, "invalid path", http.StatusBadRequest)
 						return
 					}
-					
+
 					decrypt := r.URL.Query().Get("decrypt") == "1" || r.URL.Query().Get("decrypt") == "true"
-					
+
 					var data []byte
 					if decrypt {
 						// This check ONLY gates the UI reveal functionality, NOT deployments
@@ -382,13 +382,13 @@ func SetupIacRoutes(router chi.Router) {
 							http.Error(w, "confirmation required", http.StatusForbidden)
 							return
 						}
-						
+
 						// For .env files, reconstruct with preserved comments
 						if strings.HasSuffix(strings.ToLower(rel), ".env") {
 							// Decrypt the file
 							ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 							defer cancel()
-							
+
 							// Use dotenv input/output types for SOPS
 							cmd := exec.CommandContext(ctx, "sops", "-d", "--input-type", "dotenv", "--output-type", "dotenv", full)
 							out, err := cmd.CombinedOutput()
@@ -401,7 +401,7 @@ func SetupIacRoutes(router chi.Router) {
 									return
 								}
 							}
-							
+
 							// Try to load and apply preserved comments
 							commentsFile := full + ".comments.json"
 							if commentData, err := os.ReadFile(commentsFile); err == nil {
@@ -419,7 +419,7 @@ func SetupIacRoutes(router chi.Router) {
 							// Non-.env files: decrypt with proper type detection
 							ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 							defer cancel()
-							
+
 							// Detect file type for SOPS decryption
 							var cmd *exec.Cmd
 							lowerPath := strings.ToLower(rel)
@@ -433,7 +433,7 @@ func SetupIacRoutes(router chi.Router) {
 								// Let SOPS auto-detect for other file types
 								cmd = exec.CommandContext(ctx, "sops", "-d", full)
 							}
-							
+
 							out, err := cmd.CombinedOutput()
 							if err != nil {
 								http.Error(w, "sops decrypt failed: "+string(out), http.StatusNotImplemented)
@@ -454,18 +454,18 @@ func SetupIacRoutes(router chi.Router) {
 							return
 						}
 					}
-					
+
 					// Return raw content, not JSON
 					w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 					w.Header().Set("Cache-Control", "no-store")
 					_, _ = w.Write(data)
 				})
-				
+
 				// Save/update file - use existing logic with resolved stack ID
 				r.Post("/file", func(w http.ResponseWriter, r *http.Request) {
 					scopeName := chi.URLParam(r, "scopename")
 					stackname := chi.URLParam(r, "stackname")
-					
+
 					// Get or create stack ID
 					id, err := services.GetStackIDByHostAndName(r.Context(), scopeName, stackname)
 					if err != nil {
@@ -475,7 +475,7 @@ func SetupIacRoutes(router chi.Router) {
 						hosts, _ := invMgr.GetHosts()
 						scopeKind := "host"
 						isHost := false
-						
+
 						for _, h := range hosts {
 							if h.Name == scopeName {
 								scopeKind = "host"
@@ -483,7 +483,7 @@ func SetupIacRoutes(router chi.Router) {
 								break
 							}
 						}
-						
+
 						if !isHost {
 							// Check groups
 							groups, _ := invMgr.GetGroups()
@@ -494,14 +494,14 @@ func SetupIacRoutes(router chi.Router) {
 								}
 							}
 						}
-						
+
 						id, err = services.CreateIacStack(r.Context(), scopeKind, scopeName, stackname, false)
 						if err != nil {
 							http.Error(w, err.Error(), http.StatusBadRequest)
 							return
 						}
 					}
-					
+
 					// Now use the same logic as /stacks/{id}/file endpoint
 					var body struct {
 						Path    string `json:"path"`
@@ -549,7 +549,7 @@ func SetupIacRoutes(router chi.Router) {
 					data := []byte(body.Content)
 					sz := len(data)
 					sum := fmt.Sprintf("%x", sha256.Sum256(data))
-					
+
 					// Debug: Check for YAML anchors
 					if strings.Contains(body.Content, "&") || strings.Contains(body.Content, "*") {
 						common.DebugLog("File save: Found YAML anchors in %s", body.Path)
@@ -559,11 +559,11 @@ func SetupIacRoutes(router chi.Router) {
 					if body.Sops {
 						// No need to check for permission - encryption should always be allowed
 						// The user explicitly requested it and it's necessary for security
-						
+
 						// For .env files, preserve comments
 						if strings.HasSuffix(strings.ToLower(body.Path), ".env") {
 							cleanContent, comments := services.ParseDotenvWithComments(body.Content)
-							
+
 							// Save comments to .comments.json file
 							if len(comments.Comments) > 0 {
 								commentsFile := full + ".comments.json"
@@ -572,7 +572,7 @@ func SetupIacRoutes(router chi.Router) {
 									common.InfoLog("Failed to save comments file: %v", err)
 								}
 							}
-							
+
 							// Encrypt the cleaned content
 							tmp := full + ".tmp"
 							if err := os.WriteFile(tmp, []byte(cleanContent), 0o644); err != nil {
@@ -580,7 +580,7 @@ func SetupIacRoutes(router chi.Router) {
 								return
 							}
 							defer os.Remove(tmp)
-							
+
 							ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 							defer cancel()
 							cmd := exec.CommandContext(ctx, "sops", "-e", "-i", "--input-type", "dotenv", "--output-type", "dotenv", tmp)
@@ -603,7 +603,7 @@ func SetupIacRoutes(router chi.Router) {
 							defer os.Remove(tmp)
 							ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 							defer cancel()
-							
+
 							// Detect file type for SOPS
 							var cmd *exec.Cmd
 							lowerPath := strings.ToLower(body.Path)
@@ -617,7 +617,7 @@ func SetupIacRoutes(router chi.Router) {
 								// Let SOPS auto-detect for other file types
 								cmd = exec.CommandContext(ctx, "sops", "-e", "-i", tmp)
 							}
-							
+
 							out, err := cmd.CombinedOutput()
 							if err != nil {
 								http.Error(w, "sops encrypt failed: "+string(out), http.StatusBadRequest)
@@ -634,19 +634,19 @@ func SetupIacRoutes(router chi.Router) {
 							http.Error(w, err.Error(), http.StatusBadRequest)
 							return
 						}
-						
+
 						// Clean up any old comment files if saving without SOPS
 						if strings.HasSuffix(strings.ToLower(body.Path), ".env") {
 							commentsFile := full + ".comments.json"
 							_ = os.Remove(commentsFile)
 						}
 					}
-					
+
 					// Update database with file metadata
 					if err := services.UpsertIacFile(r.Context(), id, body.Role, body.Path, body.Sops, sum, int64(sz)); err != nil {
 						common.InfoLog("Failed to update database for file %s: %v", body.Path, err)
 					}
-					
+
 					// Trigger git push if configured
 					gitSync := services.GetGitSync()
 					config, _ := database.GetGitSyncConfig(r.Context())
@@ -661,10 +661,10 @@ func SetupIacRoutes(router chi.Router) {
 							}
 						}()
 					}
-					
+
 					writeJSON(w, http.StatusOK, map[string]any{"status": "saved", "size": sz, "sha256": sum, "sops": body.Sops})
 				})
-				
+
 				// Delete file
 				r.Delete("/file", func(w http.ResponseWriter, r *http.Request) {
 					scopeName := chi.URLParam(r, "scopename")
@@ -674,24 +674,24 @@ func SetupIacRoutes(router chi.Router) {
 						http.Error(w, "missing path", http.StatusBadRequest)
 						return
 					}
-					
+
 					stackID, err := services.GetStackIDByHostAndName(r.Context(), scopeName, stackname)
 					if err != nil {
 						http.Error(w, "Stack not found", http.StatusNotFound)
 						return
 					}
-					
+
 					if err := services.DeleteIacFileRow(r.Context(), stackID, rel); err != nil {
 						http.Error(w, err.Error(), http.StatusBadRequest)
 						return
 					}
-					
+
 					root, err := services.GetRepoRootForStack(r.Context(), stackID)
 					if err == nil {
 						fullPath := filepath.Join(root, rel)
 						os.Remove(fullPath)
 					}
-					
+
 					// Trigger git push if configured
 					gitSync := services.GetGitSync()
 					config, _ := database.GetGitSyncConfig(r.Context())
@@ -706,21 +706,21 @@ func SetupIacRoutes(router chi.Router) {
 							}
 						}()
 					}
-					
+
 					writeJSON(w, http.StatusOK, map[string]any{"deleted": true})
 				})
-				
+
 				// Deploy endpoint (non-streaming)
 				r.Post("/deploy", func(w http.ResponseWriter, r *http.Request) {
 					scopeName := chi.URLParam(r, "scopename")
 					stackname := chi.URLParam(r, "stackname")
-					
+
 					stackID, err := services.GetStackIDByHostAndName(r.Context(), scopeName, stackname)
 					if err != nil {
 						http.Error(w, "Stack not found", http.StatusNotFound)
 						return
 					}
-					
+
 					// Check if stack has content
 					ok, derr := services.StackHasContent(r.Context(), stackID)
 					if derr != nil {
@@ -731,7 +731,7 @@ func SetupIacRoutes(router chi.Router) {
 						http.Error(w, "stack has no deployable content", http.StatusBadRequest)
 						return
 					}
-					
+
 					// Deploy in background
 					manual := r.URL.Query().Get("auto") != "1"
 					go func(id int64, manual bool) {
@@ -745,25 +745,25 @@ func SetupIacRoutes(router chi.Router) {
 						}
 						common.InfoLog("deploy: stack %d ok", id)
 					}(stackID, manual)
-					
+
 					writeJSON(w, http.StatusAccepted, map[string]any{
 						"status":  "accepted",
 						"stackID": stackID,
 						"allowed": true,
 					})
 				})
-				
+
 				// Deploy check endpoint
 				r.Post("/deploy-check", func(w http.ResponseWriter, r *http.Request) {
 					scopeName := chi.URLParam(r, "scopename")
 					stackname := chi.URLParam(r, "stackname")
-					
+
 					_, err := services.GetStackIDByHostAndName(r.Context(), scopeName, stackname)
 					if err != nil {
 						http.Error(w, "Stack not found", http.StatusNotFound)
 						return
 					}
-					
+
 					// For now, just return that deployment is allowed
 					// TODO: Add actual configuration change detection
 					writeJSON(w, http.StatusOK, map[string]any{
@@ -771,18 +771,18 @@ func SetupIacRoutes(router chi.Router) {
 						"allowed": true,
 					})
 				})
-				
+
 				// Streaming deploy endpoint
 				r.Get("/deploy-stream", func(w http.ResponseWriter, r *http.Request) {
 					scopeName := chi.URLParam(r, "scopename")
 					stackname := chi.URLParam(r, "stackname")
-					
+
 					stackID, err := services.GetStackIDByHostAndName(r.Context(), scopeName, stackname)
 					if err != nil {
 						http.Error(w, "Stack not found", http.StatusNotFound)
 						return
 					}
-					
+
 					// Check if stack has content
 					ok, derr := services.StackHasContent(r.Context(), stackID)
 					if derr != nil {
@@ -793,16 +793,16 @@ func SetupIacRoutes(router chi.Router) {
 						http.Error(w, "stack has no deployable content", http.StatusBadRequest)
 						return
 					}
-					
+
 					// Set up Server-Sent Events
 					w.Header().Set("Content-Type", "text/event-stream")
 					w.Header().Set("Cache-Control", "no-cache")
 					w.Header().Set("Connection", "keep-alive")
 					w.Header().Set("Access-Control-Allow-Origin", "*")
-					
+
 					// Create event channel
 					eventChan := make(chan map[string]interface{}, 100)
-					
+
 					// Start deployment in background
 					ctx := context.WithValue(r.Context(), services.CtxManualKey{}, true)
 					if r.URL.Query().Get("force") == "true" {
@@ -813,14 +813,14 @@ func SetupIacRoutes(router chi.Router) {
 							common.ErrorLog("deploy-stream: stack %d failed: %v", stackID, err)
 						}
 					}()
-					
+
 					// Create encoder for SSE
 					flusher, ok := w.(http.Flusher)
 					if !ok {
 						http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
 						return
 					}
-					
+
 					// Send events to client
 					for event := range eventChan {
 						data, _ := json.Marshal(event)
@@ -830,7 +830,7 @@ func SetupIacRoutes(router chi.Router) {
 				})
 			})
 		})
-		
+
 		// Force IaC scan (local)
 		r.Post("/scan", func(w http.ResponseWriter, r *http.Request) {
 			ctx, cancel := context.WithTimeout(r.Context(), 2*time.Minute)
@@ -899,7 +899,7 @@ func SetupIacRoutes(router chi.Router) {
 		// Find the stack ID
 		var stackID int64
 		err := common.DB.QueryRow(r.Context(), `
-			SELECT id FROM iac_stacks 
+			SELECT id FROM iac_stacks
 			WHERE scope_name = $1 AND stack_name = $2
 		`, scope, stackName).Scan(&stackID)
 		if err != nil {
@@ -923,10 +923,10 @@ func SetupIacRoutes(router chi.Router) {
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Connection", "keep-alive")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		
+
 		// Create event channel
 		eventChan := make(chan map[string]interface{}, 100)
-		
+
 		// Start deployment in background
 		ctx := context.WithValue(r.Context(), services.CtxManualKey{}, true)
 		// Check for force parameter to bypass config unchanged checks

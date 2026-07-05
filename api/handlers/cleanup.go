@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"net/http"
-	
+
 	"dd-ui/common"
 	"github.com/go-chi/chi/v5"
 )
@@ -22,12 +22,12 @@ func SetupCleanupRoutes(router chi.Router) {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"status": "cleanup routes are working"}`))
 		})
-		
+
 		// Host-scoped cleanup operations
 		r.Route("/hosts/{hostname}", func(r chi.Router) {
 			// Preview endpoints
 			r.Get("/preview/{operation}", handleCleanupSpacePreview)
-			
+
 			// Execution endpoints
 			r.Post("/system", handleCleanupSystemPrune)
 			r.Post("/images", handleCleanupImagePrune)
@@ -41,7 +41,7 @@ func SetupCleanupRoutes(router chi.Router) {
 		r.Route("/global", func(r chi.Router) {
 			// Preview endpoints
 			r.Get("/preview/{operation}", handleCleanupGlobalPreview)
-			
+
 			// Execution endpoints
 			r.Post("/system", handleCleanupGlobalSystem)
 		})

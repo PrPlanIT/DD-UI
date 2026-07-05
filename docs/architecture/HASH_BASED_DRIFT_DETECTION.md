@@ -22,7 +22,7 @@ This document defines the comprehensive strategy for efficient drift detection u
 ### CRITICAL: All Files May Be SOPS-Encrypted
 **IMPORTANT**: The current implementation supports SOPS encryption for **ALL** files in the stack:
 - `docker-compose.yml` / `docker-compose.yaml` - **CAN BE ENCRYPTED**
-- `.env` files (project-level and service-specific) - **CAN BE ENCRYPTED** 
+- `.env` files (project-level and service-specific) - **CAN BE ENCRYPTED**
 - Any `env_file` references - **CAN BE ENCRYPTED**
 
 ### SOPS Integration for Hash Calculation
@@ -36,7 +36,7 @@ func computeCurrentBundleHash(ctx context.Context, stackID int64) (string, error
     if cleanup != nil {
         defer cleanup()
     }
-    
+
     // 2. Hash the decrypted content in staging directory
     return hashDirectoryContents(stageDir) // Uses decrypted files
 }
@@ -58,48 +58,48 @@ func detectDriftViaHashes(stackID int64) (bool, string, error) {
     if err != nil {
         return false, "", err
     }
-    
+
     storedBundleHash, err := getStoredBundleHash(stackID)
     if err != nil {
         return false, "", err
     }
-    
+
     // IaC files changed?
     if currentBundleHash != storedBundleHash {
         // Clear cached Docker hashes - forces container recheck
         if err := clearCachedDockerConfigHashes(stackID); err != nil {
             return false, "", err
         }
-        
+
         // Update stored bundle hash
         if err := updateStoredBundleHash(stackID, currentBundleHash); err != nil {
             return false, "", err
         }
-        
+
         return true, "IaC files changed since last deployment", nil
     }
-    
-    // TIER 2: Container Configuration Change Detection  
+
+    // TIER 2: Container Configuration Change Detection
     cachedDockerHashes, err := getCachedDockerConfigHashes(stackID)
     if err != nil {
         return false, "", err
     }
-    
+
     actualDockerHashes, err := getActualDockerConfigHashes(stackID)
     if err != nil {
         return false, "", err
     }
-    
+
     // Container configs changed?
     if !hashMapsEqual(cachedDockerHashes, actualDockerHashes) {
         // Update cache with current reality
         if err := storeCachedDockerConfigHashes(stackID, actualDockerHashes); err != nil {
             return false, "", err
         }
-        
+
         return true, "Container configurations changed", nil
     }
-    
+
     return false, "No drift detected", nil
 }
 ```
@@ -112,7 +112,7 @@ When bundle hash changes, clear Docker config cache:
 func clearCachedDockerConfigHashes(stackID int64) error {
     // Clear the cache - next check will fetch fresh Docker hashes
     return db.Exec(ctx, `
-        UPDATE stack_drift_cache 
+        UPDATE stack_drift_cache
         SET docker_config_cache = '{}', last_updated = NOW()
         WHERE stack_id = $1
     `, stackID)
@@ -138,29 +138,29 @@ com.docker.compose.project=myproject
 func getActualDockerConfigHashes(stackID int64) (map[string]string, error) {
     // Get project label for filtering
     projectLabel := composeProjectLabelFromStack(stackName)
-    
+
     // Filter containers by project
     filters := dockerFilters.NewArgs()
     filters.Add("label", "com.docker.compose.project="+projectLabel)
-    
+
     containers, err := dockerClient.ContainerList(ctx, container.ListOptions{
         Filters: filters,
     })
     if err != nil {
         return nil, err
     }
-    
+
     // Extract config hashes (lightweight operation)
     hashes := make(map[string]string)
     for _, cont := range containers {
         serviceName := cont.Labels["com.docker.compose.service"]
         configHash := cont.Labels["com.docker.compose.config-hash"]
-        
+
         if serviceName != "" && configHash != "" {
             hashes[serviceName] = configHash
         }
     }
-    
+
     return hashes, nil
 }
 ```
@@ -174,7 +174,7 @@ CREATE TABLE stack_drift_cache (
     bundle_hash         TEXT NOT NULL,
     docker_config_cache JSONB NOT NULL DEFAULT '{}', -- service_name -> config_hash mapping
     last_updated        TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    
+
     INDEX idx_stack_drift_cache_updated (last_updated),
     INDEX idx_stack_drift_cache_bundle (bundle_hash)
 );
@@ -214,21 +214,21 @@ CREATE TABLE stack_drift_cache (
 ```go
 func listEnhancedIacStacksForHost(ctx context.Context, hostName string) ([]EnhancedIacStackOut, error) {
     // ... existing logic ...
-    
+
     for _, stack := range baseStacks {
         enhanced := EnhancedIacStackOut{IacStackOut: stack}
-        
+
         // Use hash-based drift detection
         hasDrift, driftReason, err := detectDriftViaHashes(stack.ID)
         if err != nil {
             debugLog("Hash-based drift detection failed for stack %s: %v", stack.Name, err)
             return nil, err
         }
-        
+
         enhanced.DriftDetected = hasDrift
         enhanced.DriftReason = driftReason
         debugLog("Stack %s: drift=%v, reason=%s", stack.Name, hasDrift, driftReason)
-        
+
         // ... rest of existing logic ...
     }
 }
@@ -242,13 +242,13 @@ func onSuccessfulDeployment(stackID int64) error {
     if err != nil {
         return err
     }
-    
+
     // Get Docker config hashes from newly deployed containers
     dockerHashes, err := getActualDockerConfigHashes(stackID)
     if err != nil {
         return err
     }
-    
+
     // Store both in cache
     return updateStackDriftCache(stackID, bundleHash, dockerHashes)
 }
@@ -264,7 +264,7 @@ debugLog("Stack %s: Docker config hashes cached=%v, actual=%v", stackName, cache
 debugLog("Stack %s: drift detection via hashes: drift=%v, reason=%s", stackName, hasDrift, reason)
 ```
 
-### SOPS Integration Logging  
+### SOPS Integration Logging
 ```go
 debugLog("SOPS: staging %d files for bundle hash calculation", fileCount)
 debugLog("SOPS: decrypted %d files, %d were encrypted", totalFiles, encryptedFiles)

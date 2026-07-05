@@ -41,10 +41,10 @@ var viewBoostTracker = &ViewBoostTracker{
 func (vbt *ViewBoostTracker) AddView(hostName string) {
 	vbt.mu.Lock()
 	defer vbt.mu.Unlock()
-	
+
 	vbt.activeViews[hostName]++
 	debugLog("View boost: Added viewer for host %s (total: %d)", hostName, vbt.activeViews[hostName])
-	
+
 	// Clear any existing cleanup timer since we have active viewers
 	if timer, exists := vbt.boostTimers[hostName]; exists {
 		timer.Stop()
@@ -56,11 +56,11 @@ func (vbt *ViewBoostTracker) AddView(hostName string) {
 func (vbt *ViewBoostTracker) RemoveView(hostName string) {
 	vbt.mu.Lock()
 	defer vbt.mu.Unlock()
-	
+
 	if vbt.activeViews[hostName] > 0 {
 		vbt.activeViews[hostName]--
 		debugLog("View boost: Removed viewer for host %s (remaining: %d)", hostName, vbt.activeViews[hostName])
-		
+
 		// If no more active viewers, start cleanup timer
 		if vbt.activeViews[hostName] == 0 {
 			// Clean up immediately
@@ -79,7 +79,7 @@ func (vbt *ViewBoostTracker) ShouldBoostHost(hostName string) bool {
 
 func main() {
 	addr := common.Env("DD_UI_BIND", ":443")
-	
+
 	// Show current log level on startup
 	currentLevel := getLogLevel()
 	infoLog("DDUI starting with log level: %s", currentLevel)
@@ -115,7 +115,7 @@ func main() {
 	startIacAutoScanner(ctx)
 
 	r := makeRouter()
-	
+
 	// Wrap router with session middleware
 	var handler http.Handler = r
 	if localSessionManager != nil {
@@ -261,7 +261,7 @@ func startAutoScanner(ctx context.Context) {
 	perHostTO := envDur("DD_UI_SCAN_DOCKER_HOST_TIMEOUT", "45s")     // per host protection
 	conc := envInt("DD_UI_SCAN_DOCKER_CONCURRENCY", 3)
 
-	infoLog("scan: smart scanner enabled base_interval=%s boost_interval=%s host_timeout=%s conc=%d", 
+	infoLog("scan: smart scanner enabled base_interval=%s boost_interval=%s host_timeout=%s conc=%d",
 		baseInterval, boostInterval, perHostTO, conc)
 
 	// optional boot scan
@@ -278,7 +278,7 @@ func startSmartScanLoop(ctx context.Context, baseInterval, boostInterval, perHos
 	// Track per-host timers
 	hostTimers := make(map[string]*time.Timer)
 	var timersMu sync.Mutex
-	
+
 	// Function to scan a specific host
 	scanHost := func(hostName string) {
 		// Scan this specific host
@@ -290,24 +290,24 @@ func startSmartScanLoop(ctx context.Context, baseInterval, boostInterval, perHos
 			debugLog("Smart scan completed for host %s: saved=%d containers", hostName, saved)
 		}
 	}
-	
+
 	// Function to schedule next scan for a host
 	var scheduleHostScan func(string)
 	scheduleHostScan = func(hostName string) {
 		timersMu.Lock()
 		defer timersMu.Unlock()
-		
+
 		// Stop existing timer if any
 		if timer, exists := hostTimers[hostName]; exists {
 			timer.Stop()
 		}
-		
+
 		// Choose interval based on view boost
 		interval := baseInterval
 		if viewBoostTracker.ShouldBoostHost(hostName) {
 			interval = boostInterval
 		}
-		
+
 		// Schedule next scan
 		hostTimers[hostName] = time.AfterFunc(interval, func() {
 			select {
@@ -319,23 +319,23 @@ func startSmartScanLoop(ctx context.Context, baseInterval, boostInterval, perHos
 			}
 		})
 	}
-	
+
 	// Initial scan and scheduling for all hosts
 	hosts, err := database.ListHosts(ctx)
 	if err != nil {
 		debugLog("Smart scan failed to get initial hosts: %v", err)
 		return
 	}
-	
+
 	debugLog("Smart scan: Starting timers for %d hosts", len(hosts))
 	for _, host := range hosts {
 		scheduleHostScan(host.Name)
 	}
-	
+
 	// Wait for context cancellation
 	<-ctx.Done()
 	debugLog("Smart scan: Stopping all host timers")
-	
+
 	// Clean up all timers
 	timersMu.Lock()
 	for hostName, timer := range hostTimers {

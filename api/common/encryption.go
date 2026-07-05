@@ -85,11 +85,11 @@ func EncryptIfAvailable(value string) (string, error) {
 	}
 
 	// Encrypt with SOPS
-	cmd := exec.Command("sops", "-e", 
+	cmd := exec.Command("sops", "-e",
 		"--age", recipients,
 		"--encrypted-regex", "^.*$",
 		tmpFile.Name())
-	
+
 	output, err := cmd.Output()
 	if err != nil {
 		return value, nil // Encryption failed, return original

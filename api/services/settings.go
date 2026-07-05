@@ -86,7 +86,7 @@ func GetHostDevopsOverride(ctx context.Context, host string) (*bool, error) {
 	return nil, nil
 }
 
-// SetHostDevopsOverride sets the per-host DevOps override setting  
+// SetHostDevopsOverride sets the per-host DevOps override setting
 func SetHostDevopsOverride(ctx context.Context, host string, v *bool) error {
 	key := fmt.Sprintf("host:%s:devops_apply", host)
 	if v == nil {
@@ -125,8 +125,8 @@ func ShouldAutoApply(ctx context.Context, stackID int64) (bool, error) {
 	// Get stack details
 	var scopeKind, scopeName, stackName string
 	err := common.DB.QueryRow(ctx, `
-		SELECT scope_kind, scope_name, stack_name 
-		FROM iac_stacks 
+		SELECT scope_kind, scope_name, stack_name
+		FROM iac_stacks
 		WHERE id = $1
 	`, stackID).Scan(&scopeKind, &scopeName, &stackName)
 	if err != nil {
@@ -143,14 +143,14 @@ func ShouldAutoApply(ctx context.Context, stackID int64) (bool, error) {
 		if hostOverride, _ := GetHostDevopsOverride(ctx, scopeName); hostOverride != nil {
 			return *hostOverride, nil
 		}
-		
+
 		// 3. Check group-level overrides for this host
 		// Get the groups this host belongs to
 		var groups []string
 		rows, err := common.DB.Query(ctx, `
-			SELECT UNNEST(groups) as group_name 
-			FROM hosts 
-			WHERE name = $1 
+			SELECT UNNEST(groups) as group_name
+			FROM hosts
+			WHERE name = $1
 			ORDER BY group_name
 		`, scopeName)
 		if err == nil {
@@ -162,7 +162,7 @@ func ShouldAutoApply(ctx context.Context, stackID int64) (bool, error) {
 				}
 			}
 		}
-		
+
 		// Check each group in order (alphabetically sorted for consistency)
 		for _, group := range groups {
 			if groupOverride, _ := GetGroupDevopsOverride(ctx, group); groupOverride != nil {

@@ -14,7 +14,7 @@ type VolRow = { name: string; driver: string; mountpoint: string; created: strin
 export default function VolumesView({ hosts }: { hosts: Host[] }) {
   const { hostName: urlHostName } = useParams<{ hostName: string }>();
   const navigate = useNavigate();
-  
+
   // Get host from URL parameter, fallback to localStorage, then first host
   const getInitialHost = () => {
     if (urlHostName) return decodeURIComponent(urlHostName);
@@ -73,7 +73,7 @@ export default function VolumesView({ hosts }: { hosts: Host[] }) {
 
   const sortedRows = useMemo(() => {
     let filtered = rows;
-    
+
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.trim().toLowerCase();
@@ -82,7 +82,7 @@ export default function VolumesView({ hosts }: { hosts: Host[] }) {
         return searchText.includes(query);
       });
     }
-    
+
     // Apply sorting
     const copy = [...filtered];
     copy.sort((a, b) => {
@@ -159,7 +159,7 @@ export default function VolumesView({ hosts }: { hosts: Host[] }) {
       <div className="flex items-center gap-4">
         <div className="text-lg font-semibold text-white">Volumes</div>
         <HostPicker hosts={hosts} activeHost={hostName} setActiveHost={handleHostChange} />
-        <SearchBar 
+        <SearchBar
           value={searchQuery}
           onChange={setSearchQuery}
           placeholder="Search volumes..."

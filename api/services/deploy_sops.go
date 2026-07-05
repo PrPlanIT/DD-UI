@@ -35,7 +35,7 @@ type DotenvComments struct {
 func hasSopsKeys() bool {
 	ageKey := strings.TrimSpace(os.Getenv("SOPS_AGE_KEY"))
 	ageKeyFile := strings.TrimSpace(os.Getenv("SOPS_AGE_KEY_FILE"))
-	
+
 	if ageKey != "" {
 		common.DebugLog("SOPS keys: SOPS_AGE_KEY is set (length: %d)", len(ageKey))
 		return true
@@ -60,7 +60,7 @@ func looksSopsEncrypted(path, inputType string) bool {
 		return false
 	}
 	s := strings.ToLower(string(b))
-	
+
 	if inputType == "dotenv" {
 		// SOPS dotenv adds metadata keys like: sops_mac, sops_version, sops_age__*, etc.
 		hasMac := strings.Contains(s, "sops_mac=")
@@ -68,12 +68,12 @@ func looksSopsEncrypted(path, inputType string) bool {
 		hasAge := strings.Contains(s, "sops_age__")
 		result := hasMac || hasVersion || hasAge
 		common.DebugLog("SOPS detection for dotenv %s: sops_mac=%v, sops_version=%v, sops_age=%v -> encrypted=%v", path, hasMac, hasVersion, hasAge, result)
-		
+
 		// Debug: log detection result without exposing content
 		if !result || strings.Contains(path, "immich-postgres_secret.env") {
 			common.DebugLog("SOPS detection for %s: file size=%d bytes, encrypted=%v", path, len(b), result)
 		}
-		
+
 		return result
 	}
 	// YAML/JSON compose: top-level "sops:" (yaml) or a "sops" object (json)
@@ -145,7 +145,7 @@ func readDecryptedOrPlain(ctx context.Context, full, inputType string) ([]byte, 
 // Drop SOPS metadata keys from dotenv content and normalize "export KEY=..." to "KEY=...".
 func filterDotenvSopsKeys(b []byte) []byte {
 	content := string(b)
-	
+
 	// Check if SOPS returned JSON format instead of dotenv format
 	if strings.TrimSpace(content) != "" && content[0] == '{' {
 		common.InfoLog("filterDotenvSopsKeys: detected JSON format from SOPS decrypt, attempting to parse")
@@ -169,7 +169,7 @@ func filterDotenvSopsKeys(b []byte) []byte {
 			return result
 		}
 	}
-	
+
 	// Standard dotenv format processing
 	lines := strings.Split(content, "\n")
 	out := make([]string, 0, len(lines))
@@ -261,18 +261,18 @@ func copyRegularFile(src, dst string, mode os.FileMode) error {
 // ParseDotenvWithComments extracts comments and their positions, returns cleaned content for SOPS
 func ParseDotenvWithComments(content string) (cleanedContent string, comments DotenvComments) {
 	common.DebugLog("SOPS: ParseDotenvWithComments called with %d bytes", len(content))
-	
+
 	// Normalize line endings: convert \r\n to \n and remove standalone \r
 	normalizedContent := strings.ReplaceAll(content, "\r\n", "\n")
 	normalizedContent = strings.ReplaceAll(normalizedContent, "\r", "\n")
-	
+
 	lines := strings.Split(normalizedContent, "\n")
 	var cleanedLines []string
 	var commentInfos []CommentInfo
-	
+
 	for i, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		
+
 		// Track comments and their line numbers (but skip purely empty lines)
 		if strings.HasPrefix(trimmed, "#") {
 			commentInfos = append(commentInfos, CommentInfo{
@@ -281,12 +281,12 @@ func ParseDotenvWithComments(content string) (cleanedContent string, comments Do
 			})
 			continue
 		}
-		
+
 		// Skip empty lines entirely - don't preserve them as comments
 		if trimmed == "" {
 			continue
 		}
-		
+
 		// Keep lines that look like KEY=VALUE
 		if strings.Contains(trimmed, "=") {
 			cleanedLines = append(cleanedLines, line)
@@ -298,16 +298,16 @@ func ParseDotenvWithComments(content string) (cleanedContent string, comments Do
 			})
 		}
 	}
-	
+
 	// Check if original content ended with a newline to preserve that behavior
 	cleanedContent = strings.Join(cleanedLines, "\n")
 	if strings.HasSuffix(normalizedContent, "\n") && !strings.HasSuffix(cleanedContent, "\n") {
 		cleanedContent += "\n"
 	}
-	
-	common.DebugLog("SOPS: ParseDotenvWithComments returning - original had trailing newline: %v, output has trailing newline: %v", 
+
+	common.DebugLog("SOPS: ParseDotenvWithComments returning - original had trailing newline: %v, output has trailing newline: %v",
 		strings.HasSuffix(normalizedContent, "\n"), strings.HasSuffix(cleanedContent, "\n"))
-		
+
 	return cleanedContent, DotenvComments{Comments: commentInfos}
 }
 
@@ -316,23 +316,23 @@ func ReconstructDotenvWithComments(cleanContent string, comments DotenvComments)
 	if len(comments.Comments) == 0 {
 		return cleanContent
 	}
-	
+
 	// Normalize line endings in clean content too
 	normalizedClean := strings.ReplaceAll(cleanContent, "\r\n", "\n")
 	normalizedClean = strings.ReplaceAll(normalizedClean, "\r", "\n")
-	
+
 	// Check if original clean content ended with a newline
 	endsWithNewline := strings.HasSuffix(normalizedClean, "\n")
-	
+
 	cleanLines := strings.Split(strings.TrimSuffix(normalizedClean, "\n"), "\n")
 	var result []string
-	
+
 	// Create a map of line numbers to comments for quick lookup
 	commentMap := make(map[int]string)
 	for _, comment := range comments.Comments {
 		commentMap[comment.LineNumber] = comment.Content
 	}
-	
+
 	// Find the maximum line number to determine final size
 	maxLine := 0
 	for lineNum := range commentMap {
@@ -340,7 +340,7 @@ func ReconstructDotenvWithComments(cleanContent string, comments DotenvComments)
 			maxLine = lineNum
 		}
 	}
-	
+
 	// Reconstruct the file line by line
 	cleanIndex := 0
 	for i := 0; i <= maxLine; i++ {
@@ -355,7 +355,7 @@ func ReconstructDotenvWithComments(cleanContent string, comments DotenvComments)
 			cleanIndex++
 		}
 	}
-	
+
 	// Add any remaining clean lines
 	for cleanIndex < len(cleanLines) {
 		if cleanLines[cleanIndex] != "" || cleanIndex == len(cleanLines)-1 {
@@ -363,13 +363,13 @@ func ReconstructDotenvWithComments(cleanContent string, comments DotenvComments)
 		}
 		cleanIndex++
 	}
-	
+
 	// Join and preserve original trailing newline behavior
 	reconstructed := strings.Join(result, "\n")
 	if endsWithNewline && !strings.HasSuffix(reconstructed, "\n") {
 		reconstructed += "\n"
 	}
-	
+
 	return reconstructed
 }
 
@@ -510,15 +510,15 @@ func StageStackForCompose(ctx context.Context, stackID int64) (stageStackDir str
 				return "", nil, cleanup, derr
 			}
 			common.DebugLog("Staging env file %s: %d bytes, was_decrypted=%v", f.relPath, len(content), wasDecrypted)
-			
+
 			// Check if content looks like JSON (SOPS might output JSON even with --input-type dotenv)
 			if wasDecrypted && len(content) > 0 && content[0] == '{' {
 				common.InfoLog("Staging env file %s: SOPS returned JSON format, will convert to dotenv", f.relPath)
 			}
-			
+
 			content = filterDotenvSopsKeys(content)
 			common.DebugLog("Staging env file %s: filtered to %d bytes", f.relPath, len(content))
-			
+
 			if err := writeFileSecure(f.dstAbs, content, 0o600); err != nil {
 				return "", nil, cleanup, err
 			}

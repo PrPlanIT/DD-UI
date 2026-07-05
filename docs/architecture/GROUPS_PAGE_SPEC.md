@@ -77,7 +77,7 @@ Visual Design:
 ┌─ Infrastructure (12 hosts) ──────────────── ▲ [Edit] [+Host] [Delete]
 │ Tags: critical, production, monitoring
 │ Description: Core infrastructure services and networking
-│ 
+│
 │ ┌─ DNS (2 hosts) ────────────── ▼ [Edit] [+Host] [Delete]
 │ │ Tags: dns, primary, secondary
 │ │ Description: DNS resolution services
@@ -134,7 +134,7 @@ interface Host {
   groups: string[];
   labels: Record<string, string>;
   owner: string;
-  
+
   // New fields for group management
   tags: string[];
   description?: string;
@@ -268,7 +268,7 @@ all:
       ansible_host: 10.30.1.111
       ansible_user: kai
       # description: Primary automation controller
-    
+
     # tags: docker,gpu,ml,production
     anchorage:
       ansible_host: 10.30.1.122
@@ -283,7 +283,7 @@ proxmox:
   vars:
     ansible_user: root
 
-# tags: automation,configuration,infrastructure  
+# tags: automation,configuration,infrastructure
 ansible:
   # description: Automation and configuration management nodes
   hosts:

@@ -81,18 +81,18 @@ func (g *GitSyncService) Initialize(ctx context.Context) error {
 // Start begins the Git synchronization process
 func (g *GitSyncService) Start(ctx context.Context) error {
 	g.mu.Lock()
-	
+
 	if g.isRunning {
 		g.mu.Unlock()
 		return nil
 	}
-	
+
 	// Set running flag early
 	g.isRunning = true
 	g.mu.Unlock()
 
 	common.InfoLog("Start: Beginning Git sync initialization for %s", g.config.RepoURL)
-	
+
 	// Initialize repository without holding lock
 	if err := g.initRepository(ctx); err != nil {
 		g.mu.Lock()
@@ -159,7 +159,7 @@ func (g *GitSyncService) initRepository(ctx context.Context) error {
 	if err := g.configureRepository(ctx); err != nil {
 		return err
 	}
-	
+
 	// Ensure working directory exists and is initialized
 	return g.ensureWorkingDirectory(ctx)
 }
@@ -167,7 +167,7 @@ func (g *GitSyncService) initRepository(ctx context.Context) error {
 // initInExistingDirectory initializes git in an existing directory and sets up selective sync
 func (g *GitSyncService) initInExistingDirectory(ctx context.Context) error {
 	common.InfoLog("InitExisting: Initializing Git repository in %s", g.syncPath)
-	
+
 	// Set cloning flag (we're initializing, which is similar)
 	g.mu.Lock()
 	g.isCloning = true
@@ -222,7 +222,7 @@ func (g *GitSyncService) initInExistingDirectory(ctx context.Context) error {
 			fetchCmd.Env = append(os.Environ(), fmt.Sprintf("GIT_SSH_COMMAND=%s", sshCmd))
 		}
 	}
-	
+
 	if fetchCmd == nil {
 		fetchCmd = g.buildGitCommand(ctx, "fetch", "origin", g.config.Branch)
 	}
@@ -241,11 +241,11 @@ func (g *GitSyncService) initInExistingDirectory(ctx context.Context) error {
 	listCmd := exec.CommandContext(ctx, "git", "ls-remote", "--heads", "origin", g.config.Branch)
 	listCmd.Dir = g.syncPath
 	listOutput, _ := listCmd.Output()
-	
+
 	if len(listOutput) > 0 {
 		// Remote branch exists - set up tracking and merge
 		common.InfoLog("InitExisting: Remote branch %s exists, setting up tracking", g.config.Branch)
-		
+
 		// Create local branch tracking remote
 		branchCmd := exec.CommandContext(ctx, "git", "checkout", "-b", g.config.Branch, fmt.Sprintf("origin/%s", g.config.Branch))
 		branchCmd.Dir = g.syncPath
@@ -254,13 +254,13 @@ func (g *GitSyncService) initInExistingDirectory(ctx context.Context) error {
 			checkoutCmd := exec.CommandContext(ctx, "git", "checkout", g.config.Branch)
 			checkoutCmd.Dir = g.syncPath
 			checkoutCmd.CombinedOutput()
-			
+
 			// Set upstream
 			upstreamCmd := exec.CommandContext(ctx, "git", "branch", "--set-upstream-to", fmt.Sprintf("origin/%s", g.config.Branch), g.config.Branch)
 			upstreamCmd.Dir = g.syncPath
 			upstreamCmd.CombinedOutput()
 		}
-		
+
 		// Try to merge remote changes (will handle conflicts later)
 		g.mergeRemoteChanges(ctx)
 	} else {
@@ -280,7 +280,7 @@ func (g *GitSyncService) initInExistingDirectory(ctx context.Context) error {
 // createGitIgnore creates a .gitignore file for selective tracking
 func (g *GitSyncService) createGitIgnore(ctx context.Context) error {
 	gitignorePath := filepath.Join(g.syncPath, ".gitignore")
-	
+
 	// Check if .gitignore already exists
 	if _, err := os.Stat(gitignorePath); err == nil {
 		common.InfoLog("InitExisting: .gitignore already exists")
@@ -314,7 +314,7 @@ func (g *GitSyncService) createGitIgnore(ctx context.Context) error {
 	if err := os.WriteFile(gitignorePath, []byte(gitignoreContent), 0644); err != nil {
 		return fmt.Errorf("failed to create .gitignore: %w", err)
 	}
-	
+
 	common.InfoLog("InitExisting: Created .gitignore for selective tracking")
 	return nil
 }
@@ -326,7 +326,7 @@ func (g *GitSyncService) mergeRemoteChanges(ctx context.Context) error {
 		common.WarnLog("Initial setup conflict detected: %s", msg)
 		return fmt.Errorf("initial setup conflict: %s", msg)
 	}
-	
+
 	// First, add any local changes to index
 	addCmd := exec.CommandContext(ctx, "git", "add", "inventory", "docker-compose")
 	addCmd.Dir = g.syncPath
@@ -336,7 +336,7 @@ func (g *GitSyncService) mergeRemoteChanges(ctx context.Context) error {
 	statusCmd := exec.CommandContext(ctx, "git", "status", "--porcelain")
 	statusCmd.Dir = g.syncPath
 	statusOutput, _ := statusCmd.Output()
-	
+
 	if len(statusOutput) > 0 {
 		// Commit local changes first with configured author
 		authorName := g.config.CommitAuthorName
@@ -347,7 +347,7 @@ func (g *GitSyncService) mergeRemoteChanges(ctx context.Context) error {
 		if authorEmail == "" {
 			authorEmail = "ddui@localhost"
 		}
-		
+
 		commitCmd := exec.CommandContext(ctx, "git",
 			"-c", fmt.Sprintf("user.name=%s", authorName),
 			"-c", fmt.Sprintf("user.email=%s", authorEmail),
@@ -369,7 +369,7 @@ func (g *GitSyncService) mergeRemoteChanges(ctx context.Context) error {
 			mergeCmd.Env = append(os.Environ(), fmt.Sprintf("GIT_SSH_COMMAND=%s", sshCmd))
 		}
 	}
-	
+
 	if mergeCmd == nil {
 		mergeCmd = g.buildGitCommand(ctx, "pull", "--no-rebase", "origin", g.config.Branch)
 	}
@@ -419,7 +419,7 @@ func (g *GitSyncService) createInitialCommit(ctx context.Context) error {
 	if authorEmail == "" {
 		authorEmail = "ddui@localhost"
 	}
-	
+
 	commitCmd := exec.CommandContext(ctx, "git",
 		"-c", fmt.Sprintf("user.name=%s", authorName),
 		"-c", fmt.Sprintf("user.email=%s", authorEmail),
@@ -460,16 +460,16 @@ func (g *GitSyncService) cloneRepository(ctx context.Context) error {
 		sshCmd, cleanupFunc := g.setupSSHCommand(ctx)
 		if sshCmd != "" {
 			cleanup = cleanupFunc
-			cloneCmd = exec.CommandContext(ctx, "git", "clone", 
+			cloneCmd = exec.CommandContext(ctx, "git", "clone",
 				"--branch", g.config.Branch,
 				g.config.RepoURL, g.syncPath)
 			cloneCmd.Env = append(os.Environ(), fmt.Sprintf("GIT_SSH_COMMAND=%s", sshCmd))
 		}
 	}
-	
+
 	// Fallback to standard method if SSH setup failed or not using SSH
 	if cloneCmd == nil {
-		cloneCmd = g.buildGitCommand(ctx, "clone", 
+		cloneCmd = g.buildGitCommand(ctx, "clone",
 			"--branch", g.config.Branch,
 			g.config.RepoURL, g.syncPath)
 	}
@@ -616,7 +616,7 @@ func (g *GitSyncService) setupSSHCommand(ctx context.Context) (string, func()) {
 	// -o UserKnownHostsFile=/dev/null prevents host key storage
 	// -o LogLevel=ERROR reduces verbosity
 	sshCmd := fmt.Sprintf("ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes -o LogLevel=ERROR", tmpFile.Name())
-	
+
 	common.InfoLog("Git SSH authentication configured using provided SSH key")
 	common.DebugLog("SSH key file created at: %s (will be cleaned up after operation)", tmpFile.Name())
 	return sshCmd, cleanup
@@ -647,7 +647,7 @@ func (g *GitSyncService) atomicPull(ctx context.Context, force bool) error {
 
 	common.InfoLog("AtomicPull: Starting pull from remote")
 	startTime := time.Now()
-	
+
 	// Ensure working directory exists
 	if err := g.ensureWorkingDirectory(ctx); err != nil {
 		return fmt.Errorf("failed to ensure working directory: %w", err)
@@ -667,7 +667,7 @@ func (g *GitSyncService) atomicPull(ctx context.Context, force bool) error {
 	if cleanup != nil {
 		defer cleanup()
 	}
-	
+
 	// If no SSH key, use current environment
 	if gitEnv == nil {
 		gitEnv = os.Environ()
@@ -681,13 +681,13 @@ func (g *GitSyncService) atomicPull(ctx context.Context, force bool) error {
 	if _, err := pullCmd.CombinedOutput(); err != nil {
 		// If pull fails, try to reset and pull again
 		common.WarnLog("Pull failed, resetting and retrying: %v", err)
-		
+
 		// Reset to match remote
 		resetCmd := exec.CommandContext(ctx, "git", "reset", "--hard", fmt.Sprintf("origin/%s", g.config.Branch))
 		resetCmd.Dir = g.workPath
 		resetCmd.Env = gitEnv
 		resetCmd.CombinedOutput()
-		
+
 		// Try pull again
 		pullCmd2 := exec.CommandContext(ctx, "git", "pull", "origin", g.config.Branch)
 		pullCmd2.Dir = g.workPath
@@ -703,27 +703,27 @@ func (g *GitSyncService) atomicPull(ctx context.Context, force bool) error {
 	headHashCmd.Dir = g.workPath
 	headHashBytes, _ := headHashCmd.Output()
 	originalHead := strings.TrimSpace(string(headHashBytes))
-	
+
 	// Copy local files into the working directory to see if they differ
 	common.InfoLog("AtomicPull: Checking for local changes to preserve")
 	if err := g.copyFromDataToGit(); err != nil {
 		common.WarnLog("Failed to copy local files for comparison: %v", err)
 	}
-	
+
 	// Check if there are differences
 	statusCmd := exec.CommandContext(ctx, "git", "status", "--porcelain")
 	statusCmd.Dir = g.workPath
 	statusOutput, _ := statusCmd.Output()
-	
+
 	if len(statusOutput) > 0 {
 		// There are local changes that differ from remote - preserve them in history
 		common.InfoLog("AtomicPull: Local files differ from remote, preserving in history")
-		
+
 		// Stage all changes
 		addCmd := exec.CommandContext(ctx, "git", "add", "-A")
 		addCmd.Dir = g.workPath
 		addCmd.CombinedOutput()
-		
+
 		// Commit with preservation message
 		authorName := g.config.CommitAuthorName
 		if authorName == "" {
@@ -733,7 +733,7 @@ func (g *GitSyncService) atomicPull(ctx context.Context, force bool) error {
 		if authorEmail == "" {
 			authorEmail = "ddui@localhost"
 		}
-		
+
 		commitMsg := fmt.Sprintf("info: DD-UI ignored these local changes [%s]", time.Now().Format("2006-01-02 15:04:05"))
 		commitCmd := exec.CommandContext(ctx, "git",
 			"-c", fmt.Sprintf("user.name=%s", authorName),
@@ -747,7 +747,7 @@ func (g *GitSyncService) atomicPull(ctx context.Context, force bool) error {
 			}
 		} else {
 			common.InfoLog("AtomicPull: Local changes preserved in commit")
-			
+
 			// Push the preservation commit - this is critical for audit trail
 			pushCmd := exec.CommandContext(ctx, "git", "push", "origin", g.config.Branch)
 			pushCmd.Dir = g.workPath
@@ -760,14 +760,14 @@ func (g *GitSyncService) atomicPull(ctx context.Context, force bool) error {
 			common.InfoLog("AtomicPull: Preservation commit pushed successfully")
 		}
 	}
-	
+
 	// Step 3: Reset back to the original HEAD (the commit before we preserved local changes)
 	// This gives us the clean remote state without our local changes
 	common.InfoLog("AtomicPull: Resetting to clean remote state")
 	resetToCmd := exec.CommandContext(ctx, "git", "reset", "--hard", originalHead)
 	resetToCmd.Dir = g.workPath
 	resetToCmd.CombinedOutput()
-	
+
 	// Step 4: Now copy the clean remote state to local /data
 	common.InfoLog("AtomicPull: Applying remote files to /data")
 	if err := g.copyFromGitToData(); err != nil {
@@ -802,12 +802,12 @@ func (g *GitSyncService) atomicPush(ctx context.Context, force bool) error {
 	common.InfoLog("AtomicPush: Starting push to remote")
 	common.InfoLog("AtomicPush: Working directory: %s", g.workPath)
 	common.InfoLog("AtomicPush: Data directory: %s", g.syncPath)
-	
+
 	// Ensure working directory exists before attempting push
 	if err := g.ensureWorkingDirectory(ctx); err != nil {
 		return fmt.Errorf("failed to ensure working directory: %w", err)
 	}
-	
+
 	startTime := time.Now()
 
 	// Setup SSH if needed
@@ -823,7 +823,7 @@ func (g *GitSyncService) atomicPush(ctx context.Context, force bool) error {
 	if cleanup != nil {
 		defer cleanup()
 	}
-	
+
 	// If no SSH key, use current environment
 	if gitEnv == nil {
 		gitEnv = os.Environ()
@@ -839,12 +839,12 @@ func (g *GitSyncService) atomicPush(ctx context.Context, force bool) error {
 		// Check for different types of failures
 		if strings.Contains(outputStr, "CONFLICT") || strings.Contains(outputStr, "Automatic merge failed") {
 			common.InfoLog("Pull had conflicts, will preserve history and overwrite with local state")
-			
+
 			// Check for local commits before resetting
 			cherryCmd := exec.CommandContext(ctx, "git", "cherry", fmt.Sprintf("origin/%s", g.config.Branch), "HEAD")
 			cherryCmd.Dir = g.workPath
 			cherryOutput, _ := cherryCmd.Output()
-			
+
 			if len(cherryOutput) > 0 {
 				localCommits := strings.Count(string(cherryOutput), "\n")
 				if localCommits > 0 {
@@ -857,36 +857,36 @@ func (g *GitSyncService) atomicPush(ctx context.Context, force bool) error {
 					}
 				}
 			}
-			
+
 			// Reset to clean state and pull again
 			resetCmd := exec.CommandContext(ctx, "git", "reset", "--hard", "HEAD")
 			resetCmd.Dir = g.workPath
 			resetCmd.CombinedOutput()
-			
+
 			// Force pull to get remote state first
 			fetchCmd := exec.CommandContext(ctx, "git", "fetch", "origin", g.config.Branch)
 			fetchCmd.Dir = g.workPath
 			fetchCmd.Env = gitEnv
 			fetchCmd.CombinedOutput()
-			
+
 			resetCmd = exec.CommandContext(ctx, "git", "reset", "--hard", fmt.Sprintf("origin/%s", g.config.Branch))
 			resetCmd.Dir = g.workPath
 			resetCmd.CombinedOutput()
 		} else if strings.Contains(outputStr, "no tracking information") || strings.Contains(outputStr, "diverged") {
 			// Branch has diverged or no tracking - preserve local commits before reset
 			common.WarnLog("Branch has diverged from remote, preserving local commits")
-			
+
 			// First fetch the remote branch
 			fetchCmd := exec.CommandContext(ctx, "git", "fetch", "origin", g.config.Branch)
 			fetchCmd.Dir = g.workPath
 			fetchCmd.Env = gitEnv
 			fetchCmd.CombinedOutput()
-			
+
 			// Check for local-only commits using git cherry
 			cherryCmd := exec.CommandContext(ctx, "git", "cherry", fmt.Sprintf("origin/%s", g.config.Branch), "HEAD")
 			cherryCmd.Dir = g.workPath
 			cherryOutput, _ := cherryCmd.Output()
-			
+
 			// If we have local commits that aren't on remote, preserve them
 			if len(cherryOutput) > 0 {
 				localCommits := strings.Count(string(cherryOutput), "\n")
@@ -901,7 +901,7 @@ func (g *GitSyncService) atomicPush(ctx context.Context, force bool) error {
 					}
 				}
 			}
-			
+
 			// Now safe to reset to remote state
 			resetCmd := exec.CommandContext(ctx, "git", "reset", "--hard", fmt.Sprintf("origin/%s", g.config.Branch))
 			resetCmd.Dir = g.workPath
@@ -928,7 +928,7 @@ func (g *GitSyncService) atomicPush(ctx context.Context, force bool) error {
 
 	// Step 4: Create commit with configured author
 	commitMsg := fmt.Sprintf("State push: %s", time.Now().Format("2006-01-02 15:04:05"))
-	
+
 	// Use configured author or defaults
 	authorName := g.config.CommitAuthorName
 	if authorName == "" {
@@ -938,8 +938,8 @@ func (g *GitSyncService) atomicPush(ctx context.Context, force bool) error {
 	if authorEmail == "" {
 		authorEmail = "ddui@localhost"
 	}
-	
-	commitCmd := exec.CommandContext(ctx, "git", 
+
+	commitCmd := exec.CommandContext(ctx, "git",
 		"-c", fmt.Sprintf("user.name=%s", authorName),
 		"-c", fmt.Sprintf("user.email=%s", authorEmail),
 		"commit", "-m", commitMsg)
@@ -952,7 +952,7 @@ func (g *GitSyncService) atomicPush(ctx context.Context, force bool) error {
 		}
 		return fmt.Errorf("git commit failed: %w\n%s", err, output)
 	}
-	
+
 	common.InfoLog("AtomicPush: Commit successful, preparing to push...")
 
 	// Step 5: Push to remote (never force since we pulled first)
@@ -977,23 +977,23 @@ func (g *GitSyncService) atomicPush(ctx context.Context, force bool) error {
 	return nil
 }
 
-// Push is the public interface for pushing changes  
+// Push is the public interface for pushing changes
 func (g *GitSyncService) Push(ctx context.Context, message string, initiatedBy string) error {
 	// Reload config to ensure we have latest settings
 	config, err := database.GetGitSyncConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("loading git config: %w", err)
 	}
-	
+
 	g.mu.Lock()
 	g.config = config
 	g.mu.Unlock()
-	
+
 	// Check if sync is enabled
 	if config == nil || !config.SyncEnabled || config.RepoURL == "" {
 		return fmt.Errorf("git sync is not configured or enabled")
 	}
-	
+
 	// Use force setting from config
 	force := config.ForceOnConflict
 	return g.atomicPush(ctx, force)
@@ -1004,7 +1004,7 @@ func (g *GitSyncService) detectConflict(ctx context.Context) (bool, string) {
 	// Get current remote commit
 	lsRemoteCmd := exec.CommandContext(ctx, "git", "ls-remote", "origin", g.config.Branch)
 	lsRemoteCmd.Dir = g.workPath
-	
+
 	// Setup SSH if needed for ls-remote
 	if g.config.SSHKey != "" {
 		sshCmd, cleanup := g.setupSSHCommand(ctx)
@@ -1015,28 +1015,28 @@ func (g *GitSyncService) detectConflict(ctx context.Context) (bool, string) {
 			lsRemoteCmd.Env = append(os.Environ(), fmt.Sprintf("GIT_SSH_COMMAND=%s", sshCmd))
 		}
 	}
-	
+
 	output, err := lsRemoteCmd.CombinedOutput()
 	if err != nil {
 		return false, ""
 	}
-	
+
 	parts := strings.Fields(string(output))
 	if len(parts) == 0 {
 		return false, ""
 	}
 	remoteHash := parts[0]
-	
+
 	// Check if remote changed since last sync
 	remoteChanged := g.config.LastSyncHash != "" && g.config.LastSyncHash != remoteHash
-	
+
 	// Check if local files changed
 	localChanged := g.hasLocalChanges()
-	
+
 	if localChanged && remoteChanged {
 		return true, "both local and remote have changes"
 	}
-	
+
 	return false, ""
 }
 
@@ -1045,14 +1045,14 @@ func (g *GitSyncService) ensureWorkingDirectory(ctx context.Context) error {
 	// Check if working directory exists and is a valid git repo
 	if info, err := os.Stat(filepath.Join(g.workPath, ".git")); err != nil || !info.IsDir() {
 		common.InfoLog("Working directory doesn't exist or not a git repo, cloning from %s", g.config.RepoURL)
-		
+
 		// Remove any existing directory first
 		os.RemoveAll(g.workPath)
-		
+
 		// Setup authentication for clone
 		var cloneCmd *exec.Cmd
 		var cleanup func()
-		
+
 		if g.config.SSHKey != "" {
 			// SSH authentication
 			sshCmd, cleanupFunc := g.setupSSHCommand(ctx)
@@ -1070,19 +1070,19 @@ func (g *GitSyncService) ensureWorkingDirectory(ctx context.Context) error {
 			// No authentication (public repo)
 			cloneCmd = exec.CommandContext(ctx, "git", "clone", g.config.RepoURL, g.workPath, "--branch", g.config.Branch)
 		}
-		
+
 		if cleanup != nil {
 			defer cleanup()
 		}
-		
+
 		// Try to clone the remote repository
 		if output, err := cloneCmd.CombinedOutput(); err != nil {
 			// If clone fails because branch doesn't exist, try without branch specification
-			if strings.Contains(string(output), "not found in upstream") || 
+			if strings.Contains(string(output), "not found in upstream") ||
 			   strings.Contains(string(output), "Remote branch") && strings.Contains(string(output), "not found") ||
 			   strings.Contains(string(output), "couldn't find remote ref") {
 				common.WarnLog("Branch %s not found, cloning default branch", g.config.Branch)
-				
+
 				// Clone without specifying branch (gets default)
 				var fallbackCmd *exec.Cmd
 				if g.config.SSHKey != "" && cleanup != nil {
@@ -1095,7 +1095,7 @@ func (g *GitSyncService) ensureWorkingDirectory(ctx context.Context) error {
 				} else {
 					fallbackCmd = exec.CommandContext(ctx, "git", "clone", g.config.RepoURL, g.workPath)
 				}
-				
+
 				if fallbackOutput, fallbackErr := fallbackCmd.CombinedOutput(); fallbackErr != nil {
 					// If fallback also fails, check if repo is empty
 					if strings.Contains(string(fallbackOutput), "empty repository") {
@@ -1121,43 +1121,43 @@ func (g *GitSyncService) ensureWorkingDirectory(ctx context.Context) error {
 					return nil
 				}
 			}
-			
+
 			// If clone fails because repo is empty, initialize it
 			if strings.Contains(string(output), "empty repository") {
 				common.InfoLog("Remote repository is empty, initializing new repo structure")
-				
+
 				// Create directory
 				if err := os.MkdirAll(g.workPath, 0755); err != nil {
 					return fmt.Errorf("failed to create work directory: %w", err)
 				}
-				
+
 				// Initialize git
 				initCmd := exec.CommandContext(ctx, "git", "init")
 				initCmd.Dir = g.workPath
 				if output, err := initCmd.CombinedOutput(); err != nil {
 					return fmt.Errorf("failed to init work directory: %w\n%s", err, output)
 				}
-				
+
 				// Set branch name
 				branchCmd := exec.CommandContext(ctx, "git", "checkout", "-b", g.config.Branch)
 				branchCmd.Dir = g.workPath
 				branchCmd.CombinedOutput()
-				
+
 				// Add origin
 				remoteCmd := exec.CommandContext(ctx, "git", "remote", "add", "origin", g.config.RepoURL)
 				remoteCmd.Dir = g.workPath
 				remoteCmd.CombinedOutput()
-				
+
 				// Create initial README
 				readmePath := filepath.Join(g.workPath, "README.md")
 				readmeContent := fmt.Sprintf("# DD-UI Git Sync Repository\n\nThis repository is managed by DD-UI for syncing inventory and docker-compose configurations.\n\nInitialized: %s\n", time.Now().Format(time.RFC3339))
 				os.WriteFile(readmePath, []byte(readmeContent), 0644)
-				
+
 				// Initial commit
 				addCmd := exec.CommandContext(ctx, "git", "add", ".")
 				addCmd.Dir = g.workPath
 				addCmd.CombinedOutput()
-				
+
 				authorName := g.config.CommitAuthorName
 				if authorName == "" {
 					authorName = "DD-UI Bot"
@@ -1166,19 +1166,19 @@ func (g *GitSyncService) ensureWorkingDirectory(ctx context.Context) error {
 				if authorEmail == "" {
 					authorEmail = "ddui@localhost"
 				}
-				
+
 				commitCmd := exec.CommandContext(ctx, "git",
 					"-c", fmt.Sprintf("user.name=%s", authorName),
 					"-c", fmt.Sprintf("user.email=%s", authorEmail),
 					"commit", "-m", "Initial repository setup by DD-UI")
 				commitCmd.Dir = g.workPath
 				commitCmd.CombinedOutput()
-				
+
 				common.InfoLog("Created initial repository structure")
 			} else {
 				return fmt.Errorf("failed to clone repository: %w\n%s", err, output)
 			}
-			
+
 			// Fetch
 			var gitEnv []string
 			if g.config.SSHKey != "" {
@@ -1192,21 +1192,21 @@ func (g *GitSyncService) ensureWorkingDirectory(ctx context.Context) error {
 			} else {
 				gitEnv = os.Environ()
 			}
-			
+
 			fetchCmd := exec.CommandContext(ctx, "git", "fetch", "origin")
 			fetchCmd.Dir = g.workPath
 			fetchCmd.Env = gitEnv
 			fetchCmd.CombinedOutput() // Ignore errors - might be empty repo
-			
+
 			// Checkout branch
 			checkoutCmd := exec.CommandContext(ctx, "git", "checkout", "-b", g.config.Branch)
 			checkoutCmd.Dir = g.workPath
 			checkoutCmd.CombinedOutput()
 		}
-		
+
 		common.InfoLog("Git working directory ready at %s", g.workPath)
 	}
-	
+
 	return nil
 }
 
@@ -1214,7 +1214,7 @@ func (g *GitSyncService) ensureWorkingDirectory(ctx context.Context) error {
 func (g *GitSyncService) detectInitialSetupConflict(ctx context.Context) (bool, string) {
 	// Check if local has docker-compose or inventory files
 	hasLocalFiles := false
-	
+
 	// Check for local docker-compose directory
 	if info, err := os.Stat(filepath.Join(g.syncPath, "docker-compose")); err == nil && info.IsDir() {
 		// Check if directory has any files
@@ -1223,20 +1223,20 @@ func (g *GitSyncService) detectInitialSetupConflict(ctx context.Context) (bool, 
 			hasLocalFiles = true
 		}
 	}
-	
+
 	// Check for local inventory file
 	if _, err := os.Stat(filepath.Join(g.syncPath, "inventory")); err == nil {
 		hasLocalFiles = true
 	}
-	
+
 	if !hasLocalFiles {
 		// No local files, safe to pull from remote
 		return false, ""
 	}
-	
+
 	// Check if remote has files
 	hasRemoteFiles := false
-	
+
 	// Use git ls-tree to check remote contents
 	lsTreeCmd := exec.CommandContext(ctx, "git", "ls-tree", "-r", "--name-only", fmt.Sprintf("origin/%s", g.config.Branch))
 	lsTreeCmd.Dir = g.syncPath
@@ -1249,11 +1249,11 @@ func (g *GitSyncService) detectInitialSetupConflict(ctx context.Context) (bool, 
 			}
 		}
 	}
-	
+
 	if hasLocalFiles && hasRemoteFiles {
 		return true, "both local (/data) and remote repository contain files. Please choose Push to overwrite remote with local, Pull to overwrite local with remote, or manually resolve before enabling sync"
 	}
-	
+
 	return false, ""
 }
 
@@ -1263,19 +1263,19 @@ func (g *GitSyncService) hasLocalChanges() bool {
 	// For now, simple implementation - check if files exist and are recent
 	inventoryPath := filepath.Join(g.syncPath, "inventory")
 	dockerComposePath := filepath.Join(g.syncPath, "docker-compose")
-	
+
 	if info, err := os.Stat(inventoryPath); err == nil {
 		if time.Since(info.ModTime()) < 24*time.Hour {
 			return true
 		}
 	}
-	
+
 	if info, err := os.Stat(dockerComposePath); err == nil {
 		if time.Since(info.ModTime()) < 24*time.Hour {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -1284,7 +1284,7 @@ func (g *GitSyncService) backupCurrentState(backupPath string) error {
 	if err := os.MkdirAll(backupPath, 0755); err != nil {
 		return err
 	}
-	
+
 	// Backup inventory
 	if _, err := os.Stat(filepath.Join(g.syncPath, "inventory")); err == nil {
 		src := filepath.Join(g.syncPath, "inventory")
@@ -1293,7 +1293,7 @@ func (g *GitSyncService) backupCurrentState(backupPath string) error {
 			common.WarnLog("Failed to backup inventory: %v", err)
 		}
 	}
-	
+
 	// Backup docker-compose directory
 	if _, err := os.Stat(filepath.Join(g.syncPath, "docker-compose")); err == nil {
 		src := filepath.Join(g.syncPath, "docker-compose")
@@ -1302,7 +1302,7 @@ func (g *GitSyncService) backupCurrentState(backupPath string) error {
 			common.WarnLog("Failed to backup docker-compose: %v", err)
 		}
 	}
-	
+
 	common.InfoLog("Backup created at %s", backupPath)
 	return nil
 }
@@ -1314,13 +1314,13 @@ func (g *GitSyncService) clearGitWorkingDirectory() error {
 	if err := os.Remove(inventoryPath); err != nil && !os.IsNotExist(err) {
 		common.WarnLog("Failed to remove git inventory: %v", err)
 	}
-	
+
 	// Remove docker-compose directory
 	dockerComposePath := filepath.Join(g.workPath, "docker-compose")
 	if err := os.RemoveAll(dockerComposePath); err != nil {
 		common.WarnLog("Failed to remove git docker-compose: %v", err)
 	}
-	
+
 	return nil
 }
 
@@ -1334,19 +1334,19 @@ func (g *GitSyncService) copyFromDataToGit() error {
 		if inventoryDir != "." && inventoryDir != "" {
 			srcInventoryDir := filepath.Join(g.syncPath, inventoryDir)
 			dstInventoryDir := filepath.Join(g.workPath, inventoryDir)
-			
+
 			if _, err := os.Stat(srcInventoryDir); err == nil {
 				common.InfoLog("CopyFromDataToGit: Syncing %s directory with rsync", inventoryDir)
-				
+
 				// Ensure destination exists
 				os.MkdirAll(dstInventoryDir, 0755)
-				
+
 				// rsync -avz --delete for exact mirror (trailing slash important!)
 				rsyncCmd := exec.Command("rsync", "-avz", "--delete", srcInventoryDir+"/", dstInventoryDir+"/")
 				if _, err := rsyncCmd.CombinedOutput(); err != nil {
 					// Fallback to cp if rsync not available
 					common.WarnLog("rsync failed for %s, falling back to cp: %v", inventoryDir, err)
-					
+
 					// Remove destination first for clean copy
 					os.RemoveAll(dstInventoryDir)
 					cpCmd := exec.Command("cp", "-r", srcInventoryDir, dstInventoryDir)
@@ -1364,24 +1364,24 @@ func (g *GitSyncService) copyFromDataToGit() error {
 			}
 		}
 	}
-	
+
 	// Use rsync for docker directory (using environment variable)
 	dockerDir := common.Env("DD_UI_DOCKER_DIR", "docker-compose")
 	srcDockerCompose := filepath.Join(g.syncPath, dockerDir)
 	dstDockerCompose := filepath.Join(g.workPath, dockerDir)
-	
+
 	if _, err := os.Stat(srcDockerCompose); err == nil {
 		common.InfoLog("CopyFromDataToGit: Syncing docker-compose directory with rsync")
-		
+
 		// Ensure destination exists
 		os.MkdirAll(dstDockerCompose, 0755)
-		
+
 		// rsync -avz --delete for exact mirror (trailing slash important!)
 		rsyncCmd := exec.Command("rsync", "-avz", "--delete", srcDockerCompose+"/", dstDockerCompose+"/")
 		if _, err := rsyncCmd.CombinedOutput(); err != nil {
 			// Fallback to cp if rsync not available
 			common.WarnLog("rsync failed, falling back to cp: %v", err)
-			
+
 			// Remove destination first for clean copy
 			os.RemoveAll(dstDockerCompose)
 			cpCmd := exec.Command("cp", "-r", srcDockerCompose, dstDockerCompose)
@@ -1397,7 +1397,7 @@ func (g *GitSyncService) copyFromDataToGit() error {
 			os.RemoveAll(dstDockerCompose)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -1411,19 +1411,19 @@ func (g *GitSyncService) copyFromGitToData() error {
 		if inventoryDir != "." && inventoryDir != "" {
 			srcInventoryDir := filepath.Join(g.workPath, inventoryDir)
 			dstInventoryDir := filepath.Join(g.syncPath, inventoryDir)
-			
+
 			if _, err := os.Stat(srcInventoryDir); err == nil {
 				common.InfoLog("CopyFromGitToData: Syncing %s directory from git", inventoryDir)
-				
+
 				// Ensure destination exists
 				os.MkdirAll(dstInventoryDir, 0755)
-				
+
 				// rsync -avz --delete for exact mirror (trailing slash important!)
 				rsyncCmd := exec.Command("rsync", "-avz", "--delete", srcInventoryDir+"/", dstInventoryDir+"/")
 				if _, err := rsyncCmd.CombinedOutput(); err != nil {
 					// Fallback to cp if rsync not available
 					common.WarnLog("rsync failed for %s, falling back to cp: %v", inventoryDir, err)
-					
+
 					// Remove destination first for clean copy
 					os.RemoveAll(dstInventoryDir)
 					cpCmd := exec.Command("cp", "-r", srcInventoryDir, dstInventoryDir)
@@ -1441,24 +1441,24 @@ func (g *GitSyncService) copyFromGitToData() error {
 			}
 		}
 	}
-	
+
 	// Use rsync for docker directory if it exists in git (using environment variable)
 	dockerDir := common.Env("DD_UI_DOCKER_DIR", "docker-compose")
 	srcDockerCompose := filepath.Join(g.workPath, dockerDir)
 	dstDockerCompose := filepath.Join(g.syncPath, dockerDir)
-	
+
 	if _, err := os.Stat(srcDockerCompose); err == nil {
 		common.InfoLog("CopyFromGitToData: Syncing docker-compose directory from git")
-		
+
 		// Ensure destination exists
 		os.MkdirAll(dstDockerCompose, 0755)
-		
+
 		// rsync -avz --delete for exact mirror (trailing slash important!)
 		rsyncCmd := exec.Command("rsync", "-avz", "--delete", srcDockerCompose+"/", dstDockerCompose+"/")
 		if _, err := rsyncCmd.CombinedOutput(); err != nil {
 			// Fallback to cp if rsync not available
 			common.WarnLog("rsync failed, falling back to cp: %v", err)
-			
+
 			// Remove destination first for clean copy
 			os.RemoveAll(dstDockerCompose)
 			cpCmd := exec.Command("cp", "-r", srcDockerCompose, dstDockerCompose)
@@ -1474,7 +1474,7 @@ func (g *GitSyncService) copyFromGitToData() error {
 			os.RemoveAll(dstDockerCompose)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -1485,13 +1485,13 @@ func (g *GitSyncService) copyFile(src, dst string) error {
 		return err
 	}
 	defer sourceFile.Close()
-	
+
 	destFile, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
 	defer destFile.Close()
-	
+
 	_, err = io.Copy(destFile, sourceFile)
 	return err
 }
@@ -1502,24 +1502,24 @@ func (g *GitSyncService) copyDir(src, dst string) error {
 	if err := os.MkdirAll(dst, 0755); err != nil {
 		return err
 	}
-	
+
 	// Walk source directory
 	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		
+
 		// Calculate destination path
 		relPath, err := filepath.Rel(src, path)
 		if err != nil {
 			return err
 		}
 		dstPath := filepath.Join(dst, relPath)
-		
+
 		if info.IsDir() {
 			return os.MkdirAll(dstPath, info.Mode())
 		}
-		
+
 		return g.copyFile(path, dstPath)
 	})
 }
@@ -1527,21 +1527,21 @@ func (g *GitSyncService) copyDir(src, dst string) error {
 // Sync performs smart bi-directional sync (no force option)
 func (g *GitSyncService) Sync(ctx context.Context, initiatedBy string) error {
 	common.InfoLog("SmartSync: Checking for changes")
-	
+
 	// Detect if there's a conflict
 	if conflict, details := g.detectConflict(ctx); conflict {
 		return fmt.Errorf("conflict detected: %s. Use Push or Pull with force to resolve", details)
 	}
-	
+
 	// Check what changed
 	localChanged := g.hasLocalChanges()
 	remoteChanged := false
-	
+
 	// Check remote for changes
 	fetchCmd := exec.CommandContext(ctx, "git", "fetch", "origin", g.config.Branch)
 	fetchCmd.Dir = g.workPath
 	fetchCmd.CombinedOutput() // Ignore errors, just try to fetch
-	
+
 	lsRemoteCmd := exec.CommandContext(ctx, "git", "ls-remote", "origin", g.config.Branch)
 	lsRemoteCmd.Dir = g.workPath
 	if output, err := lsRemoteCmd.CombinedOutput(); err == nil {
@@ -1551,7 +1551,7 @@ func (g *GitSyncService) Sync(ctx context.Context, initiatedBy string) error {
 			remoteChanged = g.config.LastSyncHash != "" && g.config.LastSyncHash != remoteHash
 		}
 	}
-	
+
 	// Smart sync decision
 	if localChanged && !remoteChanged {
 		common.InfoLog("SmartSync: Local changes detected, pushing")
@@ -1697,9 +1697,9 @@ func (g *GitSyncService) logOperation(ctx context.Context, operation, status, be
 	g.logOperationWithDuration(ctx, operation, status, beforeHash, afterHash, files, message, "system", 0)
 }
 
-func (g *GitSyncService) logOperationWithDuration(ctx context.Context, operation, status, beforeHash, afterHash string, 
+func (g *GitSyncService) logOperationWithDuration(ctx context.Context, operation, status, beforeHash, afterHash string,
 	files []string, message, initiatedBy string, duration int) {
-	
+
 	if err := database.LogGitSyncOperation(ctx, database.GitSyncLogEntry{
 		Operation:     operation,
 		Status:        status,
@@ -1748,7 +1748,7 @@ func (g *GitSyncService) GetStatus() map[string]interface{} {
 // UpdateConfig updates the Git sync configuration
 func (g *GitSyncService) UpdateConfig(ctx context.Context, config *database.GitSyncConfig) error {
 	common.InfoLog("UpdateConfig: Updating Git sync configuration")
-	
+
 	// Check if we're in the middle of cloning
 	g.mu.RLock()
 	if g.isCloning {
@@ -1757,7 +1757,7 @@ func (g *GitSyncService) UpdateConfig(ctx context.Context, config *database.GitS
 		return fmt.Errorf("clone operation in progress, please wait and try again")
 	}
 	g.mu.RUnlock()
-	
+
 	// Update configuration in database first (doesn't need lock)
 	if err := database.UpdateGitSyncConfig(ctx, config); err != nil {
 		common.ErrorLog("UpdateConfig: Failed to save config to database: %v", err)

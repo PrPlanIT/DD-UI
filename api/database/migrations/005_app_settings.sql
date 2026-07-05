@@ -21,17 +21,17 @@ CREATE TABLE IF NOT EXISTS group_settings (
 );
 
 -- Triggers
-CREATE TRIGGER app_settings_updated_at 
-    BEFORE UPDATE ON app_settings 
-    FOR EACH ROW 
+CREATE TRIGGER app_settings_updated_at
+    BEFORE UPDATE ON app_settings
+    FOR EACH ROW
     EXECUTE FUNCTION set_updated_at();
 
-CREATE TRIGGER host_settings_updated_at 
-    BEFORE UPDATE ON host_settings 
-    FOR EACH ROW 
+CREATE TRIGGER host_settings_updated_at
+    BEFORE UPDATE ON host_settings
+    FOR EACH ROW
     EXECUTE FUNCTION set_updated_at();
 
-CREATE TRIGGER group_settings_updated_at 
-    BEFORE UPDATE ON group_settings 
-    FOR EACH ROW 
+CREATE TRIGGER group_settings_updated_at
+    BEFORE UPDATE ON group_settings
+    FOR EACH ROW
     EXECUTE FUNCTION set_updated_at();

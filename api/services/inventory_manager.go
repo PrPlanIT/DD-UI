@@ -96,7 +96,7 @@ func GetInventoryManager() *InventoryManager {
 		// Build path from IAC root and inventory file
 		iacRoot := common.Env("DD_UI_IAC_ROOT", "/data")
 		invFile := common.Env("DD_UI_INVENTORY_FILE", "")
-		
+
 		var path string
 		if invFile != "" {
 			// Use explicit inventory file path relative to IAC root
@@ -106,12 +106,12 @@ func GetInventoryManager() *InventoryManager {
 				path = ""
 			}
 		}
-		
+
 		if path == "" {
 			// Fall back to searching for inventory file
 			path = findInventoryPath()
 		}
-		
+
 		invManager = &InventoryManager{path: path}
 		if path != "" && invManager.Load() == nil {
 			common.InfoLog("InventoryManager: Using inventory file: %s", path)
@@ -226,7 +226,7 @@ func (im *InventoryManager) GetGroups() ([]InventoryGroup, error) {
 	}
 
 	var groups []InventoryGroup
-	
+
 	// Process top-level groups
 	if inv.Groups != nil {
 		for name, group := range inv.Groups {
@@ -455,7 +455,7 @@ func (im *InventoryManager) RemoveHostFromGroup(hostname, groupname string) erro
 	if group, ok := inv[groupname].(map[string]any); ok {
 		if hosts, ok := group["hosts"].(map[string]any); ok {
 			delete(hosts, hostname)
-			
+
 			// If group is now empty, optionally remove it
 			if len(hosts) == 0 && group["vars"] == nil && group["children"] == nil {
 				delete(inv, groupname)
@@ -758,7 +758,7 @@ func (im *InventoryManager) DeleteHost(name string) error {
 		if groupName == "all" {
 			continue // Already handled above
 		}
-		
+
 		if g, ok := group.(map[string]any); ok {
 			if hosts, ok := g["hosts"].(map[string]any); ok {
 				delete(hosts, name)

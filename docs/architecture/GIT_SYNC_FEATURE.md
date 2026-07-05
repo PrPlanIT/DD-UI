@@ -231,7 +231,7 @@ auto_push: true
 auto_pull: false
 
 # Instance B: Backup
-sync_enabled: true  
+sync_enabled: true
 auto_push: false
 auto_pull: true
 ```

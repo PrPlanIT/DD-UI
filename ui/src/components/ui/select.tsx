@@ -123,6 +123,6 @@ export function SelectItem({ value, children, className }: SelectItemProps) {
 
 export function SelectValue({ placeholder }: SelectValueProps) {
   const { value } = React.useContext(SelectContext);
-  
+
   return <span>{value || placeholder}</span>;
 }

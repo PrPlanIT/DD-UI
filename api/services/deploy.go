@@ -128,7 +128,7 @@ func DeployStack(ctx context.Context, stackID int64) error {
 			return serr
 		}
 	}
-	
+
 	if stamp == nil || stamp.ID == 0 {
 		common.ErrorLog("deploy: CRITICAL - stamp is nil or has ID 0 after creation (stamp=%v)", stamp)
 		return fmt.Errorf("deployment stamp creation failed - invalid stamp ID")
@@ -148,7 +148,7 @@ func DeployStack(ctx context.Context, stackID int64) error {
 		"PATH=" + os.Getenv("PATH"),  // Need PATH to find docker/sops commands
 		"HOME=" + os.Getenv("HOME"),  // Docker may need HOME for config
 	}
-	
+
 	// Add SOPS variables if they exist (needed for decryption of env files)
 	if sopsAge := os.Getenv("SOPS_AGE_KEY"); sopsAge != "" {
 		dockerEnv = append(dockerEnv, "SOPS_AGE_KEY="+sopsAge)
@@ -156,17 +156,17 @@ func DeployStack(ctx context.Context, stackID int64) error {
 	if sopsAgeFile := os.Getenv("SOPS_AGE_KEY_FILE"); sopsAgeFile != "" {
 		dockerEnv = append(dockerEnv, "SOPS_AGE_KEY_FILE="+sopsAgeFile)
 	}
-	
+
 	// Get the host info to set up proper Docker connection
 	if host, herr := getHostForStack(ctx, stackID); herr == nil {
 		dockerURL, _ := DockerURLFor(host)
-		
+
 		// Set up SSH config for Docker CLI instead of using DOCKER_SSH_CMD
 		if err := setupSSHConfigForDocker(host); err != nil {
 			common.ErrorLog("deploy: failed to setup SSH config for Docker CLI: %v", err)
 			return err
 		}
-		
+
 		dockerEnv = append(dockerEnv, "DOCKER_HOST="+dockerURL)
 		common.DebugLog("deploy: using Docker host %s for stack %d with minimal env (no host leakage)", dockerURL, stackID)
 	} else {
@@ -193,7 +193,7 @@ func DeployStack(ctx context.Context, stackID int64) error {
 		if uerr := database.UpdateDeploymentStampStatus(ctx, stamp.ID, "success"); uerr != nil {
 			common.ErrorLog("deploy: failed to update deployment stamp status: %v", uerr)
 		}
-		
+
 		// Update drift cache after successful deployment
 		if host, herr := getHostForStack(ctx, stackID); herr == nil {
 			dockerURL, sshCmd := DockerURLFor(host)
@@ -235,7 +235,7 @@ func DeployStack(ctx context.Context, stackID int64) error {
 // DeployStackWithStream performs deployment while streaming docker compose output
 func DeployStackWithStream(ctx context.Context, stackID int64, eventChannel chan<- map[string]interface{}) error {
 	defer close(eventChannel)
-	
+
 	sendEvent := func(eventType, message string, data map[string]interface{}) {
 		event := map[string]interface{}{
 			"type": eventType,
@@ -252,7 +252,7 @@ func DeployStackWithStream(ctx context.Context, stackID int64, eventChannel chan
 			return
 		}
 	}
-	
+
 	// Auto-DevOps gate (unless manual)
 	if man, _ := ctx.Value(CtxManualKey{}).(bool); !man {
 		allowed, aerr := ShouldAutoApply(ctx, stackID)
@@ -332,9 +332,9 @@ func DeployStackWithStream(ctx context.Context, stackID int64, eventChannel chan
 		existingStamp, checkErr := database.CheckDeploymentStampExists(ctx, stackID, allComposeContent)
 		if checkErr == nil && existingStamp != nil {
 			// Configuration unchanged - ask user for confirmation
-			sendEvent("config_unchanged", 
-				fmt.Sprintf("Configuration unchanged since %s. Deploy anyway?", 
-					existingStamp.DeploymentTimestamp.Format("2006-01-02 15:04:05")), 
+			sendEvent("config_unchanged",
+				fmt.Sprintf("Configuration unchanged since %s. Deploy anyway?",
+					existingStamp.DeploymentTimestamp.Format("2006-01-02 15:04:05")),
 				map[string]interface{}{
 					"existing_stamp_id": existingStamp.ID,
 					"last_deploy_time": existingStamp.DeploymentTimestamp,
@@ -359,7 +359,7 @@ func DeployStackWithStream(ctx context.Context, stackID int64, eventChannel chan
 			return serr
 		}
 	}
-	
+
 	if stamp == nil || stamp.ID == 0 {
 		common.ErrorLog("deploy: CRITICAL - stamp is nil or has ID 0 after creation (stamp=%v)", stamp)
 		sendEvent("error", "Deployment stamp creation failed - invalid stamp ID", nil)
@@ -380,7 +380,7 @@ func DeployStackWithStream(ctx context.Context, stackID int64, eventChannel chan
 		"PATH=" + os.Getenv("PATH"),  // Need PATH to find docker/sops commands
 		"HOME=" + os.Getenv("HOME"),  // Docker may need HOME for config
 	}
-	
+
 	// Add SOPS variables if they exist (needed for decryption of env files)
 	if sopsAge := os.Getenv("SOPS_AGE_KEY"); sopsAge != "" {
 		dockerEnv = append(dockerEnv, "SOPS_AGE_KEY="+sopsAge)
@@ -388,18 +388,18 @@ func DeployStackWithStream(ctx context.Context, stackID int64, eventChannel chan
 	if sopsAgeFile := os.Getenv("SOPS_AGE_KEY_FILE"); sopsAgeFile != "" {
 		dockerEnv = append(dockerEnv, "SOPS_AGE_KEY_FILE="+sopsAgeFile)
 	}
-	
+
 	// Get the host info to set up proper Docker connection
 	if host, herr := getHostForStack(ctx, stackID); herr == nil {
 		dockerURL, _ := DockerURLFor(host)
-		
+
 		// Set up SSH config for Docker CLI instead of using DOCKER_SSH_CMD
 		if err := setupSSHConfigForDocker(host); err != nil {
 			common.ErrorLog("deploy: failed to setup SSH config for Docker CLI: %v", err)
 			sendEvent("error", fmt.Sprintf("Failed to setup SSH config: %v", err), nil)
 			return err
 		}
-		
+
 		dockerEnv = append(dockerEnv, "DOCKER_HOST="+dockerURL)
 		common.DebugLog("deploy: using Docker host %s for stack %d with minimal env (no host leakage)", dockerURL, stackID)
 		sendEvent("info", fmt.Sprintf("Using Docker host: %s (isolated environment)", dockerURL), nil)
@@ -438,7 +438,7 @@ func DeployStackWithStream(ctx context.Context, stackID int64, eventChannel chan
 
 	// Stream output in real-time
 	done := make(chan error, 2)
-	
+
 	go func() {
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
@@ -449,7 +449,7 @@ func DeployStackWithStream(ctx context.Context, stackID int64, eventChannel chan
 		}
 		done <- scanner.Err()
 	}()
-	
+
 	go func() {
 		scanner := bufio.NewScanner(stderr)
 		for scanner.Scan() {
@@ -481,7 +481,7 @@ func DeployStackWithStream(ctx context.Context, stackID int64, eventChannel chan
 		if uerr := database.UpdateDeploymentStampStatus(ctx, stamp.ID, "success"); uerr != nil {
 			common.ErrorLog("deploy: failed to update deployment stamp status: %v", uerr)
 		}
-		
+
 		if host, herr := getHostForStack(ctx, stackID); herr == nil {
 			dockerURL, sshCmd := DockerURLFor(host)
 			if dcli, done, derr := DockerClientForURL(ctx, dockerURL, sshCmd); derr == nil {
@@ -580,7 +580,7 @@ func setupSSHConfigForDocker(host database.HostRow) error {
 	if keyFile == "" {
 		return fmt.Errorf("SSH_KEY_FILE not configured")
 	}
-	
+
 	// Create ~/.ssh directory if it doesn't exist
 	homeDir := os.Getenv("HOME")
 	if homeDir == "" {
@@ -590,10 +590,10 @@ func setupSSHConfigForDocker(host database.HostRow) error {
 	if err := os.MkdirAll(sshDir, 0700); err != nil {
 		return fmt.Errorf("failed to create SSH directory: %v", err)
 	}
-	
+
 	// Create SSH config file
 	configPath := sshDir + "/config"
-	
+
 	// Check if config already has this host
 	configContent := fmt.Sprintf(`Host %s
     User %s
@@ -603,30 +603,30 @@ func setupSSHConfigForDocker(host database.HostRow) error {
     UserKnownHostsFile /dev/null
 
 `, addr, user, keyFile)
-	
+
 	// Read existing config
 	existingConfig := ""
 	if data, err := os.ReadFile(configPath); err == nil {
 		existingConfig = string(data)
 	}
-	
+
 	// Check if this host config already exists
 	if strings.Contains(existingConfig, fmt.Sprintf("Host %s", addr)) {
 		common.DebugLog("SSH config for host %s already exists", addr)
 		return nil
 	}
-	
+
 	// Append new host config
 	file, err := os.OpenFile(configPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
 		return fmt.Errorf("failed to open SSH config file: %v", err)
 	}
 	defer file.Close()
-	
+
 	if _, err := file.WriteString(configContent); err != nil {
 		return fmt.Errorf("failed to write SSH config: %v", err)
 	}
-	
+
 	common.DebugLog("SSH config added for host %s (%s@%s)", host.Name, user, addr)
 	return nil
 }

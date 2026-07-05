@@ -55,7 +55,7 @@ func ExecuteSSHDirectOperation(ctx context.Context, hostProvider HostProvider, e
 	if user == "" {
 		user = envProvider.Env("SSH_USER", "root")
 	}
-	
+
 	addr := host.Addr
 	if addr == "" {
 		addr = host.Name
@@ -68,7 +68,7 @@ func ExecuteSSHDirectOperation(ctx context.Context, hostProvider HostProvider, e
 		"-o", "ConnectTimeout=10",
 		fmt.Sprintf("%s@%s", user, addr),
 	}
-	
+
 	// Add the command to execute
 	fullCommand := op.Command
 	if len(op.Args) > 0 {
@@ -104,7 +104,7 @@ func StartContainer(ctx context.Context, actionProvider ContainerActionProvider,
 			Error:   err.Error(),
 		}
 	}
-	
+
 	return &ContainerOpResult{
 		Success: true,
 		Message: "Container started successfully",
@@ -121,7 +121,7 @@ func StopContainer(ctx context.Context, actionProvider ContainerActionProvider, 
 			Error:   err.Error(),
 		}
 	}
-	
+
 	return &ContainerOpResult{
 		Success: true,
 		Message: "Container stopped successfully",
@@ -138,7 +138,7 @@ func RestartContainer(ctx context.Context, actionProvider ContainerActionProvide
 			Error:   err.Error(),
 		}
 	}
-	
+
 	return &ContainerOpResult{
 		Success: true,
 		Message: "Container restarted successfully",

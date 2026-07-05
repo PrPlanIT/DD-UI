@@ -52,18 +52,18 @@ export default function GitSyncToggle() {
       const configResponse = await fetch('/api/git/config', {
         credentials: 'include',
       });
-      
+
       if (configResponse.status === 401) {
         handle401();
         return;
       }
-      
+
       if (!configResponse.ok) {
         throw new Error('Failed to fetch config');
       }
-      
+
       const currentConfig = await configResponse.json();
-      
+
       // Build update payload - only send necessary fields
       // Note: has_token and has_ssh_key are response-only fields
       const updatedConfig = {
@@ -79,7 +79,7 @@ export default function GitSyncToggle() {
         sync_path: currentConfig.sync_path || '/data',
         // Don't send token/key fields - backend will preserve them
       };
-      
+
       // Update config
       const response = await fetch('/api/git/config', {
         method: 'POST',
@@ -87,12 +87,12 @@ export default function GitSyncToggle() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedConfig),
       });
-      
+
       if (response.status === 401) {
         handle401();
         return;
       }
-      
+
       if (response.ok) {
         setSyncEnabled(!syncEnabled);
         debugLog(`Git sync ${!syncEnabled ? 'enabled' : 'disabled'}`);

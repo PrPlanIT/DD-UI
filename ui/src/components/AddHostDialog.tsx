@@ -76,7 +76,7 @@ export default function AddHostDialog({ open, onClose, onHostAdded, hostToEdit, 
     try {
       const url = isEditMode ? `/api/iac/hosts/${encodeURIComponent(hostToEdit.name)}` : '/api/iac/hosts';
       const method = isEditMode ? 'PUT' : 'POST';
-      
+
       const response = await fetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
@@ -357,8 +357,8 @@ export default function AddHostDialog({ open, onClose, onHostAdded, hostToEdit, 
         <DialogFooter className="flex justify-between">
           <div className="flex-1">
             {isEditMode && (
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => {
                   setTempClosedForDelete(true);
                   setShowDeleteConfirm(true);

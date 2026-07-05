@@ -5,16 +5,16 @@ export default function StatePill({ state, status, health }: { state?: string; s
     const s = (state || "").toLowerCase();
     const st = (status || "").toLowerCase();
     const h = (health || "").toLowerCase();
-    
+
     // Debug logging to understand what values we're getting
     if (s.includes("paused") || st.includes("paused")) {
         debugLog(`StatePill PAUSED: state="${state}", status="${status}", s="${s}", st="${st}"`);
     }
-    
+
     let classes = "border-slate-700 bg-slate-900 text-slate-300";
     let text = state || "unknown";
     let displayText = text;
-    
+
     // Priority: health status > detailed status > state
     if (h === "healthy") {
         classes = "border-emerald-700/60 bg-emerald-900/40 text-emerald-200";
@@ -57,9 +57,9 @@ export default function StatePill({ state, status, health }: { state?: string; s
         classes = "border-orange-700/60 bg-orange-900/40 text-orange-200 animate-pulse";
         displayText = "removing";
     }
-    
+
     return (
-      <span 
+      <span
         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${classes} max-w-full`}
         title={displayText}
       >

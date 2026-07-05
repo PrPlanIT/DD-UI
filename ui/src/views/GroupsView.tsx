@@ -66,7 +66,7 @@ export default function GroupsView({ hosts }: { hosts: Host[] }) {
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing) return;
-      
+
       const newWidth = Math.max(200, Math.min(600, e.clientX));
       setTreeWidth(newWidth);
     };
@@ -155,7 +155,7 @@ export default function GroupsView({ hosts }: { hosts: Host[] }) {
   const handleSelectGroup = async (group: Group) => {
     setSelectedGroup(group);
     setEditingGroup(null);
-    
+
     // Fetch full group details
     try {
       const response = await fetch(`/api/groups/${group.name}`, {
@@ -178,7 +178,7 @@ export default function GroupsView({ hosts }: { hosts: Host[] }) {
 
   const handleSaveGroup = async () => {
     if (!editingGroup) return;
-    
+
     setSavingGroup(true);
     try {
       const response = await fetch(`/api/groups/${editingGroup.name}`, {
@@ -187,7 +187,7 @@ export default function GroupsView({ hosts }: { hosts: Host[] }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editingGroup),
       });
-      
+
       if (response.ok) {
         infoLog('Group updated successfully');
         setSelectedGroup(editingGroup);
@@ -204,12 +204,12 @@ export default function GroupsView({ hosts }: { hosts: Host[] }) {
   const handleCreateGroup = async () => {
     console.log('CREATE BUTTON CLICKED!'); // Temporary debug line
     debugLog('handleCreateGroup called with newGroup:', newGroup);
-    
+
     if (!newGroup.name) {
       errorLog('Cannot create group: Name is required');
       return;
     }
-    
+
     try {
       // Prepare payload ensuring parent field is included correctly
       const payload = {
@@ -223,18 +223,18 @@ export default function GroupsView({ hosts }: { hosts: Host[] }) {
         allowed_users: newGroup.allowed_users || [],
         env: newGroup.env || {}
       };
-      
+
       infoLog('Creating group with payload:', JSON.stringify(payload));
-      
+
       const response = await fetch('/api/groups', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      
+
       debugLog('Create group response status:', response.status);
-      
+
       if (response.ok) {
         const result = await response.json();
         infoLog('Group created successfully:', JSON.stringify(result));
@@ -258,13 +258,13 @@ export default function GroupsView({ hosts }: { hosts: Host[] }) {
 
   const handleDeleteGroup = async (groupName: string) => {
     if (!confirm('Are you sure you want to delete this group?')) return;
-    
+
     try {
       const response = await fetch(`/api/groups/${groupName}`, {
         method: 'DELETE',
         credentials: 'include',
       });
-      
+
       if (response.ok) {
         infoLog('Group deleted successfully');
         if (selectedGroup?.name === groupName) {
@@ -279,7 +279,7 @@ export default function GroupsView({ hosts }: { hosts: Host[] }) {
 
   const handleAddHostsToGroup = async () => {
     if (!selectedGroup || selectedHostNames.length === 0) return;
-    
+
     try {
       const response = await fetch(`/api/groups/${selectedGroup.name}/hosts`, {
         method: 'POST',
@@ -287,7 +287,7 @@ export default function GroupsView({ hosts }: { hosts: Host[] }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hosts: selectedHostNames }),
       });
-      
+
       if (response.ok) {
         infoLog('Hosts added to group successfully');
         fetchGroupHosts(selectedGroup.name);
@@ -304,13 +304,13 @@ export default function GroupsView({ hosts }: { hosts: Host[] }) {
 
   const handleRemoveHostFromGroup = async (hostName: string) => {
     if (!selectedGroup) return;
-    
+
     try {
       const response = await fetch(`/api/groups/${selectedGroup.name}/hosts/${hostName}`, {
         method: 'DELETE',
         credentials: 'include',
       });
-      
+
       if (response.ok) {
         infoLog('Host removed from group successfully');
         fetchGroupHosts(selectedGroup.name);
@@ -331,7 +331,7 @@ export default function GroupsView({ hosts }: { hosts: Host[] }) {
       });
       groupList = groupList.filter(g => !childGroupNames.has(g.name));
     }
-    
+
     return groupList.map(group => (
       <div key={group.name} style={{ marginLeft: `${level * 20}px` }}>
         <div
@@ -361,8 +361,8 @@ export default function GroupsView({ hosts }: { hosts: Host[] }) {
               <span className="w-4" />
             )}
           </button>
-          {expandedGroups.has(group.name) ? 
-            <FolderOpen className="w-4 h-4 text-yellow-500" /> : 
+          {expandedGroups.has(group.name) ?
+            <FolderOpen className="w-4 h-4 text-yellow-500" /> :
             <Folder className="w-4 h-4 text-yellow-600" />
           }
           <span className="text-sm text-slate-200">{group.name}</span>
@@ -370,7 +370,7 @@ export default function GroupsView({ hosts }: { hosts: Host[] }) {
             ({group.host_count} hosts{group.stack_count > 0 ? `, ${group.stack_count} stacks` : ''})
           </span>
         </div>
-        
+
         {expandedGroups.has(group.name) && (
           <>
             {/* Render hosts in this group - show when expanded */}
@@ -384,9 +384,9 @@ export default function GroupsView({ hosts }: { hosts: Host[] }) {
                 ))}
               </div>
             )}
-            
+
             {/* Render child groups */}
-            {group.children && Array.isArray(group.children) && group.children.length > 0 && 
+            {group.children && Array.isArray(group.children) && group.children.length > 0 &&
               renderGroupTree(groups.filter(g => group.children?.includes(g.name)), level + 1, group)
             }
           </>
@@ -467,7 +467,7 @@ export default function GroupsView({ hosts }: { hosts: Host[] }) {
   return (
     <div className="h-full flex select-none">
       {/* Left Panel - Tree View */}
-      <div 
+      <div
         className="border-r border-slate-800 bg-slate-950 overflow-y-auto flex-shrink-0"
         style={{ width: `${treeWidth}px` }}
       >
@@ -486,7 +486,7 @@ export default function GroupsView({ hosts }: { hosts: Host[] }) {
             Manage host groups and their configurations
           </div>
         </div>
-        
+
         {/* New Group Form */}
         {showNewGroupForm && (
           <div className="p-4 border-b border-slate-800 bg-slate-900/50">
@@ -541,7 +541,7 @@ export default function GroupsView({ hosts }: { hosts: Host[] }) {
             </div>
           </div>
         )}
-        
+
         {/* Groups Tree */}
         <div className="p-2">
           {loading ? (
@@ -571,7 +571,7 @@ export default function GroupsView({ hosts }: { hosts: Host[] }) {
         <div className="flex items-center justify-end p-3 border-b border-slate-800">
           <GitSyncToggle />
         </div>
-        
+
         <div className="flex-1 overflow-y-auto">
         {selectedGroup ? (
           <div className="p-6 space-y-6">
@@ -767,13 +767,13 @@ export default function GroupsView({ hosts }: { hosts: Host[] }) {
         )}
         </div>
       </div>
-      
+
       {/* Host Picker Modal */}
       {showHostPicker && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-slate-900 border border-slate-700 rounded-lg p-6 w-[600px] max-h-[80vh] overflow-y-auto">
             <h3 className="text-xl font-semibold text-white mb-4">Add Hosts to Group</h3>
-            
+
             <div className="space-y-2 mb-4">
               {availableHosts.map((host: any) => {
                 const isInGroup = groupHosts.some((gh: any) => gh.name === host.name);
@@ -781,8 +781,8 @@ export default function GroupsView({ hosts }: { hosts: Host[] }) {
                   <label
                     key={host.name}
                     className={`flex items-center gap-3 p-3 rounded border ${
-                      isInGroup 
-                        ? 'bg-slate-800/50 border-slate-700 opacity-50 cursor-not-allowed' 
+                      isInGroup
+                        ? 'bg-slate-800/50 border-slate-700 opacity-50 cursor-not-allowed'
                         : 'bg-slate-900/60 border-slate-700 hover:bg-slate-800/50 cursor-pointer'
                     }`}
                   >
@@ -809,7 +809,7 @@ export default function GroupsView({ hosts }: { hosts: Host[] }) {
                 );
               })}
             </div>
-            
+
             <div className="flex justify-end gap-2">
               <Button
                 variant="ghost"

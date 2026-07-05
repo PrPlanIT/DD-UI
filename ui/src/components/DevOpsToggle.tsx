@@ -12,9 +12,9 @@ interface DevOpsToggleProps {
   compact?: boolean;
 }
 
-export default function DevOpsToggle({ 
-  level = 'global', 
-  hostName, 
+export default function DevOpsToggle({
+  level = 'global',
+  hostName,
   stackName,
   groupName,
   className = '',
@@ -40,17 +40,17 @@ export default function DevOpsToggle({
     if (level === 'stack' && groupName && stackName) {
       return `/api/devops/groups/${encodeURIComponent(groupName)}/stacks/${encodeURIComponent(stackName)}`;
     }
-    
+
     // Host-level endpoint
     if (level === 'host' && hostName) {
       return `/api/devops/hosts/${encodeURIComponent(hostName)}`;
     }
-    
-    // Group-level endpoint  
+
+    // Group-level endpoint
     if (level === 'host' && groupName) {
       return `/api/devops/groups/${encodeURIComponent(groupName)}`;
     }
-    
+
     // Global endpoint
     return '/api/devops/global';
   };
@@ -66,13 +66,13 @@ export default function DevOpsToggle({
       }
       if (response.ok) {
         const data = await response.json();
-        
+
         // Set override state (null means inheriting)
         setOverride(data.override !== undefined ? data.override : null);
-        
+
         // Set effective value (what's actually being used)
         setEffective(data.effective !== undefined ? data.effective : data.auto_deploy || false);
-        
+
         // Set where it inherits from (if applicable)
         if (data.override === null || data.override === undefined) {
           setInheritsFrom(data.inherits_from || data.source || '');
@@ -94,23 +94,23 @@ export default function DevOpsToggle({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ auto_deploy: newValue }),
       });
-      
+
       if (response.status === 401) {
         handle401();
         return;
       }
-      
+
       if (response.ok) {
         const data = await response.json();
         setOverride(data.override !== undefined ? data.override : null);
         setEffective(data.effective !== undefined ? data.effective : data.auto_deploy || false);
-        
+
         if (data.override === null || data.override === undefined) {
           setInheritsFrom(data.inherits_from || data.source || '');
         } else {
           setInheritsFrom('');
         }
-        
+
         const action = newValue === null ? 'unset' : newValue ? 'enabled' : 'disabled';
         debugLog(`DevOps ${action} at ${level} level`);
       } else {

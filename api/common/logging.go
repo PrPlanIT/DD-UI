@@ -30,24 +30,24 @@ var logLevels = map[string]int{
 // shouldLog determines if a message at the given level should be logged
 func shouldLog(level string) bool {
 	currentLevel := Env("DD_UI_LOG_LEVEL", "info")
-	
+
 	currentLevelNum, ok1 := logLevels[strings.ToLower(currentLevel)]
 	targetLevelNum, ok2 := logLevels[strings.ToLower(level)]
-	
+
 	if !ok1 || !ok2 {
 		return true // Default to logging if unknown level
 	}
-	
+
 	return targetLevelNum >= currentLevelNum
 }
 
 // logOutput handles both text and JSON output based on DD_UI_LOG_FORMAT
 func logOutput(level string, format string, args ...interface{}) {
 	message := fmt.Sprintf(format, args...)
-	
+
 	// Ensure no secrets are accidentally logged
 	message = sanitizeForLogging(message)
-	
+
 	if Env("DD_UI_LOG_FORMAT", "text") == "json" {
 		// JSON format for Loki/Grafana
 		entry := map[string]interface{}{
@@ -66,7 +66,7 @@ func logOutput(level string, format string, args ...interface{}) {
 		if level == "FATAL" {
 			log.Printf("%s: %s", level, message)
 		} else {
-			fmt.Printf("%s/%s %s: %s\n", 
+			fmt.Printf("%s/%s %s: %s\n",
 				time.Now().Format("2006/01/02"),
 				time.Now().Format("15:04:05"),
 				level, message)
@@ -127,14 +127,14 @@ func LogCommandOutput(level, prefix string, output []byte) {
 	if !shouldLog("debug") {
 		return
 	}
-	
+
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
 	// Limit output to prevent log flooding
 	maxLines := 20
 	if len(lines) > maxLines {
 		lines = append(lines[:maxLines], fmt.Sprintf("... %d more lines truncated ...", len(lines)-maxLines))
 	}
-	
+
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line != "" {
@@ -163,7 +163,7 @@ func sanitizeForLogging(line string) string {
 		"MYSQL_PASSWORD",
 		"REDIS_PASSWORD",
 	}
-	
+
 	for _, envVar := range protectedEnvVars {
 		if value := os.Getenv(envVar); value != "" && value != "true" && value != "false" {
 			// Replace the actual value with REDACTED
@@ -175,14 +175,14 @@ func sanitizeForLogging(line string) string {
 			line = strings.ReplaceAll(line, fileContent, "***REDACTED***")
 		}
 	}
-	
+
 	// Patterns that might contain secrets
 	patterns := []string{
 		`(?i)(password|passwd|pwd|secret|key|token|api[-_]?key|auth|credential|bearer)[-_=:\s]*[^\s]+`,
 		`(?i)(mysql|postgres|postgresql|mongodb|redis|amqp|mongodb\+srv)://[^@]+@[^\s]+`,
 		`[a-zA-Z0-9]{40,}`, // Long strings that might be keys/tokens (increased from 20 to 40 to reduce false positives)
 	}
-	
+
 	for _, pattern := range patterns {
 		re := regexp.MustCompile(pattern)
 		line = re.ReplaceAllStringFunc(line, func(match string) string {
@@ -205,19 +205,19 @@ func sanitizeForLogging(line string) string {
 func LogCommandError(prefix string, err error, output []byte) {
 	// Log the error without the output to prevent sensitive data exposure
 	ErrorLog("%s: command failed: %v", prefix, err)
-	
+
 	// In debug mode, log sanitized output only
 	if shouldLog("debug") && len(output) > 0 {
 		DebugLog("%s: Output available in debug mode (sanitized)", prefix)
 		lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-		
+
 		// Only show first 3 lines even in debug, and sanitize them
 		maxLines := 3
 		for i := 0; i < len(lines) && i < maxLines; i++ {
 			sanitized := sanitizeForLogging(strings.TrimSpace(lines[i]))
 			DebugLog("%s [line %d]: %s", prefix, i+1, sanitized)
 		}
-		
+
 		if len(lines) > maxLines {
 			DebugLog("%s: ... %d more lines omitted for security ...", prefix, len(lines)-maxLines)
 		}

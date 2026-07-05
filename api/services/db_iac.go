@@ -122,14 +122,14 @@ func pruneEmptyIacStacks(ctx context.Context, repoID int64) (int64, error) {
 	if repoID == 0 {
 		return 0, errors.New("repoID=0")
 	}
-	
+
 	// Delete stacks that have no files (abandoned stack creation)
 	cmd, err := common.DB.Exec(ctx, `
-		DELETE FROM iac_stacks 
-		WHERE repo_id=$1 
+		DELETE FROM iac_stacks
+		WHERE repo_id=$1
 		AND id NOT IN (
-			SELECT DISTINCT stack_id 
-			FROM iac_stack_files 
+			SELECT DISTINCT stack_id
+			FROM iac_stack_files
 			WHERE stack_id IS NOT NULL
 		)
 		AND (compose_file IS NULL OR compose_file = '')
@@ -177,7 +177,7 @@ type IacStackOut struct {
 // Helper function for hierarchical API name-to-ID resolution
 func getStackID(ctx context.Context, scopeKind, scopeName, stackName string) (int64, error) {
 	var id int64
-	err := common.DB.QueryRow(ctx, 
+	err := common.DB.QueryRow(ctx,
 		`SELECT id FROM iac_stacks WHERE scope_kind=$1 AND scope_name=$2 AND stack_name=$3`,
 		scopeKind, scopeName, stackName).Scan(&id)
 	return id, err
@@ -221,7 +221,7 @@ func listIacStacksForHost(ctx context.Context, hostName string) ([]IacStackOut, 
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	
+
 	common.DebugLog("Found %d basic stacks for host %s", len(stacks), hostName)
 
 	// Filter out empty stacks to prevent 500 errors during processing
@@ -299,14 +299,14 @@ func GetRepoRootForStack(ctx context.Context, stackID int64) (string, error) {
 func CreateIacStack(ctx context.Context, scopeKind, scopeName, stackName string, enabled bool) (int64, error) {
 	// Get the repo ID (use 1 as default for now, or get from context)
 	repoID := int64(1)
-	
+
 	// Set defaults for a new stack
 	relPath := fmt.Sprintf("docker-compose/%s/%s", scopeName, stackName)
 	composeFile := ""
 	deployKind := "unmanaged"
 	pullPolicy := ""
 	sopsStatus := "none"
-	
+
 	return UpsertIacStack(ctx, repoID, scopeKind, scopeName, stackName, relPath, composeFile, deployKind, pullPolicy, sopsStatus, enabled)
 }
 
@@ -314,27 +314,27 @@ func CreateIacStack(ctx context.Context, scopeKind, scopeName, stackName string,
 func GetStackIDByHostAndName(ctx context.Context, hostName, stackName string) (int64, error) {
 	var id int64
 	err := common.DB.QueryRow(ctx, `
-		SELECT id FROM iac_stacks 
-		WHERE scope_kind = 'host' 
-		AND scope_name = $1 
+		SELECT id FROM iac_stacks
+		WHERE scope_kind = 'host'
+		AND scope_name = $1
 		AND stack_name = $2
 		LIMIT 1
 	`, hostName, stackName).Scan(&id)
-	
+
 	if err != nil {
 		// Try group scope as fallback
 		h, herr := database.GetHostByName(ctx, hostName)
 		if herr == nil && len(h.Groups) > 0 {
 			err = common.DB.QueryRow(ctx, `
-				SELECT id FROM iac_stacks 
-				WHERE scope_kind = 'group' 
+				SELECT id FROM iac_stacks
+				WHERE scope_kind = 'group'
 				AND scope_name = ANY($1)
 				AND stack_name = $2
 				LIMIT 1
 			`, h.Groups, stackName).Scan(&id)
 		}
 	}
-	
+
 	return id, err
 }
 
@@ -344,10 +344,10 @@ func ReadIacFile(fullPath string) ([]byte, bool, error) {
 	if err != nil {
 		return nil, false, err
 	}
-	
+
 	// Check if it looks like SOPS encrypted
 	encrypted := strings.Contains(string(data), "sops:") && strings.Contains(string(data), "mac:")
-	
+
 	return data, encrypted, nil
 }
 
@@ -565,18 +565,18 @@ func GetStackDevopsOverride(ctx context.Context, scopeKind, scopeName, stackName
 	var autoDeploy *bool
 	var result sql.NullString
 	err := common.DB.QueryRow(ctx, `
-		SELECT auto_devops_override 
-		FROM iac_stacks 
+		SELECT auto_devops_override
+		FROM iac_stacks
 		WHERE scope_kind=$1 AND scope_name=$2 AND stack_name=$3
 	`, scopeKind, scopeName, stackName).Scan(&result)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("stack not found: %s/%s/%s", scopeKind, scopeName, stackName)
 	}
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if result.Valid {
 		if result.String == "true" {
 			val := true
@@ -587,7 +587,7 @@ func GetStackDevopsOverride(ctx context.Context, scopeKind, scopeName, stackName
 		}
 		// null/empty string means no override
 	}
-	
+
 	return autoDeploy, nil
 }
 
@@ -601,22 +601,22 @@ func SetStackDevopsOverride(ctx context.Context, scopeKind, scopeName, stackName
 	} else {
 		updateField = "false"
 	}
-	
+
 	result, err := common.DB.Exec(ctx, `
-		UPDATE iac_stacks 
+		UPDATE iac_stacks
 		SET auto_devops_override = $4
 		WHERE scope_kind=$1 AND scope_name=$2 AND stack_name=$3
 	`, scopeKind, scopeName, stackName, updateField)
-	
+
 	if err != nil {
 		return err
 	}
-	
+
 	rowsAffected := result.RowsAffected()
 	if rowsAffected == 0 {
 		return fmt.Errorf("stack not found: %s/%s/%s", scopeKind, scopeName, stackName)
 	}
-	
+
 	return nil
 }
 
@@ -625,9 +625,9 @@ func getStacksBatch(ctx context.Context, stackIds []int64) ([]map[string]any, er
 	if len(stackIds) == 0 {
 		return []map[string]any{}, nil
 	}
-	
+
 	var result []map[string]any
-	
+
 	for _, id := range stackIds {
 		var stack struct {
 			ID         int64   `json:"id"`
@@ -642,7 +642,7 @@ func getStacksBatch(ctx context.Context, stackIds []int64) ([]map[string]any, er
 			Override   *bool   `json:"auto_apply_override"`
 			UpdatedAt  string  `json:"updated_at"`
 		}
-		
+
 		var updatedAt time.Time
 		err := common.DB.QueryRow(ctx, `
 			SELECT id, repo_id, scope_kind::text, scope_name, stack_name, rel_path,
@@ -653,7 +653,7 @@ func getStacksBatch(ctx context.Context, stackIds []int64) ([]map[string]any, er
 			&stack.ID, &stack.RepoID, &stack.ScopeKind, &stack.ScopeName, &stack.StackName, &stack.RelPath,
 			&stack.IacEnabled, &stack.DeployKind, &stack.SopsStatus, &stack.Override, &updatedAt,
 		)
-		
+
 		if err != nil {
 			if err == sql.ErrNoRows {
 				// Skip missing stacks
@@ -661,10 +661,10 @@ func getStacksBatch(ctx context.Context, stackIds []int64) ([]map[string]any, er
 			}
 			return nil, fmt.Errorf("failed to get stack %d: %v", id, err)
 		}
-		
+
 		stack.UpdatedAt = updatedAt.Format(time.RFC3339)
 		effectiveAutoDevops, _ := ShouldAutoApply(ctx, id)
-		
+
 		stackMap := map[string]any{
 			"id":                    stack.ID,
 			"repo_id":               stack.RepoID,
@@ -679,9 +679,9 @@ func getStacksBatch(ctx context.Context, stackIds []int64) ([]map[string]any, er
 			"updated_at":            stack.UpdatedAt,
 			"effective_auto_devops": effectiveAutoDevops,
 		}
-		
+
 		result = append(result, stackMap)
 	}
-	
+
 	return result, nil
 }

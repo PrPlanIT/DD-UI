@@ -11,7 +11,7 @@ export default function SortableHeader({
 }) {
   const isActive = currentSort.key === sortKey;
   const direction = isActive ? currentSort.direction : 'asc';
-  
+
   return (
     <th className="p-2 text-left">
       <button

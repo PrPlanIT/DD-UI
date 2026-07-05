@@ -70,17 +70,17 @@ CREATE INDEX IF NOT EXISTS idx_containers_name ON containers(name);
 CREATE INDEX IF NOT EXISTS idx_containers_owner ON containers(owner);
 
 -- Triggers
-CREATE TRIGGER hosts_updated_at 
-    BEFORE UPDATE ON hosts 
-    FOR EACH ROW 
+CREATE TRIGGER hosts_updated_at
+    BEFORE UPDATE ON hosts
+    FOR EACH ROW
     EXECUTE FUNCTION set_updated_at();
 
-CREATE TRIGGER stacks_updated_at 
-    BEFORE UPDATE ON stacks 
-    FOR EACH ROW 
+CREATE TRIGGER stacks_updated_at
+    BEFORE UPDATE ON stacks
+    FOR EACH ROW
     EXECUTE FUNCTION set_updated_at();
 
-CREATE TRIGGER containers_updated_at 
-    BEFORE UPDATE ON containers 
-    FOR EACH ROW 
+CREATE TRIGGER containers_updated_at
+    BEFORE UPDATE ON containers
+    FOR EACH ROW
     EXECUTE FUNCTION set_updated_at();

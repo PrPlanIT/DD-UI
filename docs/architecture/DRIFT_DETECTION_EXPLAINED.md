@@ -12,7 +12,7 @@ DD-UI uses a hierarchical approach to minimize expensive Docker API calls while 
 
 #### Tier 1: IaC File Change Detection (Bundle Hash)
 - **What it tracks**: All IaC files (compose.yml, .env, etc.) associated with a stack
-- **How it works**: 
+- **How it works**:
   1. Computes SHA256 hash of all IaC files combined (bundle hash)
   2. Compares with previously stored bundle hash
   3. If different, drift is detected immediately

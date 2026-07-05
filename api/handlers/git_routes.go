@@ -7,7 +7,7 @@ import (
 // SetupGitSyncRoutes registers all Git sync routes
 func SetupGitSyncRoutes(api chi.Router) {
 	h := NewGitSyncHandlers()
-	
+
 	// Git sync configuration and operations
 	api.Get("/git/config", h.GetConfig)
 	api.Post("/git/config", h.UpdateConfig)

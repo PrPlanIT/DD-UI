@@ -1,4 +1,4 @@
-// ui/src/views/HostsView.tsx  
+// ui/src/views/HostsView.tsx
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,7 +34,7 @@ export default function HostsView({
       {/* Action bar matching other pages */}
       <div className="flex items-center gap-4">
         <div className="text-lg font-semibold text-white">Hosts</div>
-        
+
         {/* Small square metric cards matching host picker size */}
         <div className="flex items-center gap-2">
           <div className="px-3 py-2 bg-slate-900/60 border border-slate-800 rounded-lg flex items-center gap-2">
@@ -58,20 +58,20 @@ export default function HostsView({
             <span className="text-sm text-rose-400">{metrics.errors}</span>
           </div>
         </div>
-        
-        <SearchBar 
+
+        <SearchBar
           value={query}
           onChange={(value) => { setQuery(value); onFilter(value); }}
           placeholder="Search hosts, groups, addresses..."
           className="w-96"
         />
-        
+
         <Button onClick={onScanAll} disabled={scanning} className="bg-[#310937] hover:bg-[#2a0830] text-white">
           <RefreshCw className={`h-4 w-4 mr-1 ${scanning ? "animate-spin" : ""}`} />
           {scanning ? "Scanning…" : "Sync"}
         </Button>
 
-        <Button 
+        <Button
           onClick={() => {
             setHostToEdit(null);  // Clear edit state for new host
             setShowAddHostDialog(true);
@@ -145,8 +145,8 @@ export default function HostsView({
                   </Button>
                 </td>
                 <td className="p-3 text-center">
-                  <DevOpsToggle 
-                    level="host" 
+                  <DevOpsToggle
+                    level="host"
                     hostName={h.name}
                     className="justify-center"
                   />

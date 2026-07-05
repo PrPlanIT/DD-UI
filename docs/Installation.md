@@ -8,7 +8,7 @@
 - PostgreSQL 14+
 - Node 18+ (for dev UI), Go 1.21+ (backend)
 - **OIDC provider — required** (Zitadel/Keycloak/Authentik/Okta/Auth0; tested with Zitadel). DD-UI has no local accounts.
-- **SOPS 3.10+** available on the backend host/container (DD-UI calls `sops` by name).  
+- **SOPS 3.10+** available on the backend host/container (DD-UI calls `sops` by name).
   The provided Docker image installs it to `/usr/local/bin/sops`.
 
 ## Point DD-UI at your IaC repo (local)
@@ -44,7 +44,7 @@ Don't forget to create the secret files and add the correct values.
 ```yaml
 version: "3.8"
 services:
-  
+
   dd-ui-postgres:
     container_name: dd-ui-postgres
     image: postgres:16-alpine
@@ -63,7 +63,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
-      
+
   dd-ui-app:
     container_name: dd-ui-app
     depends_on:
@@ -80,7 +80,7 @@ services:
       - DD_UI_INVENTORY_PATH=/data/inventory
       - DD_UI_LOCAL_HOST=anchorage
       - DD_UI_UI_ORIGIN=https://dd-ui.pcfae.com
-      
+
       # Authentication / OIDC
       - DD_UI_COOKIE_SECURE=true
       - DD_UI_COOKIE_DOMAIN=dd-ui.pcfae.com
@@ -91,7 +91,7 @@ services:
       - OIDC_POST_LOGOUT_REDIRECT_URL=https://dd-ui.pcfae.com/login
       - OIDC_SCOPES=openid email profile
         # - OIDC_ALLOWED_EMAIL_DOMAIN # (optional; blocks others)
-      
+
       # Database (Postgres) Configuration:
       - DD_UI_DB_HOST=dd-ui-postgres
       - DD_UI_DB_PORT=5432
@@ -105,22 +105,22 @@ services:
 
       # Docker Connection Config
       - DOCKER_CONNECTION_METHOD=local
-      
+
       # Encryption / SOPS Config
       - DD_UI_ALLOW_SOPS_DECRYPT=true
       - SOPS_AGE_KEY_FILE=/run/secrets/sops_age_key
       - DD_UI_SESSION_SECRET_FILE=/run/secrets/session_secret
-      
+
       # SSH Config
       - SSH_USER=kai           # or a limited user in docker group
       - SSH_PORT=22
       - SSH_KEY_FILE=/run/secrets/ssh_key
       - SSH_USE_SUDO=false      # true if your user needs sudo
       - SSH_STRICT_HOST_KEY=false
-      
+
       # Auto DevOps Config
       - DD_UI_DEVOPS_APPLY=false
-      
+
       # Scanning Config - Docker Host(s) States
       - DD_UI_SCAN_DOCKER_AUTO=true
       - DD_UI_SCAN_DOCKER_INTERVAL=1m
@@ -128,7 +128,7 @@ services:
       - DD_UI_SCAN_DOCKER_CONCURRENCY=3
       - DD_UI_SCAN_DOCKER_ON_START=true
       - DD_UI_SCAN_DOCKER_DEBUG=true
-      
+
       # Scannning Config - IAC
       - DD_UI_IAC_ROOT=/data
       - DD_UI_IAC_DIRNAME=docker-compose

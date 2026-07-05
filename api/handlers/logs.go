@@ -63,18 +63,18 @@ func HandleLogStream(w http.ResponseWriter, r *http.Request) {
 
 	// Parse filters from query parameters
 	filter := parseLogFilters(r)
-	
+
 	common.DebugLog("Log stream request with filter: %+v", filter)
 
 	// Create a unique subscriber ID
 	subID := fmt.Sprintf("%d", time.Now().UnixNano())
 	logChan := make(chan LogEntry, 100)
-	
+
 	// Register subscriber
 	subMutex.Lock()
 	logSubscribers[subID] = logChan
 	subMutex.Unlock()
-	
+
 	// Cleanup on disconnect
 	defer func() {
 		subMutex.Lock()
@@ -116,7 +116,7 @@ func HandleLogStream(w http.ResponseWriter, r *http.Request) {
 			if !matchesFilter(log, filter) {
 				continue
 			}
-			
+
 			// Send log entry
 			data, err := json.Marshal(log)
 			if err != nil {
@@ -132,28 +132,28 @@ func HandleLogStream(w http.ResponseWriter, r *http.Request) {
 // collectLogsFromHosts collects logs from all Docker hosts
 func collectLogsFromHosts(ctx context.Context, filter LogFilter) {
 	hosts := services.GetHosts()
-	
+
 	var wg sync.WaitGroup
 	for _, host := range hosts {
 		// Check if host is in filter
 		if len(filter.HostNames) > 0 && !contains(filter.HostNames, host.Name) {
 			continue
 		}
-		
+
 		wg.Add(1)
 		go func(h common.Host) {
 			defer wg.Done()
 			collectHostLogs(ctx, h, filter)
 		}(host)
 	}
-	
+
 	wg.Wait()
 }
 
 // collectHostLogs collects logs from containers on a specific host
 func collectHostLogs(ctx context.Context, host common.Host, filter LogFilter) {
 	common.DebugLog("Starting log collection for host %s", host.Name)
-	
+
 	// Create Docker client for this host
 	hostRow := database.HostRow{Name: host.Name, Addr: host.Addr, Vars: host.Vars}
 	cli, err := services.DockerClientForHost(hostRow)
@@ -245,12 +245,12 @@ func streamContainerLogs(ctx context.Context, cli *client.Client, hostName strin
 				// Parse Docker log format (first 8 bytes are header)
 				if n > 8 {
 					message := string(buf[8:n])
-					
+
 					// Parse timestamp and message
 					parts := strings.SplitN(message, " ", 2)
 					timestamp := time.Now().Format(time.RFC3339)
 					logMessage := message
-					
+
 					if len(parts) >= 2 {
 						// Try to parse timestamp
 						if t, err := time.Parse(time.RFC3339Nano, parts[0]); err == nil {
@@ -287,7 +287,7 @@ func streamContainerLogs(ctx context.Context, cli *client.Client, hostName strin
 // detectLogLevel attempts to detect the log level from the message
 func detectLogLevel(message string) string {
 	msgLower := strings.ToLower(message)
-	
+
 	if strings.Contains(msgLower, "error") || strings.Contains(msgLower, "fatal") || strings.Contains(msgLower, "panic") {
 		return "ERROR"
 	}
@@ -304,7 +304,7 @@ func detectLogLevel(message string) string {
 func broadcastLog(entry LogEntry) {
 	subMutex.RLock()
 	defer subMutex.RUnlock()
-	
+
 	for _, ch := range logSubscribers {
 		select {
 		case ch <- entry:
@@ -320,7 +320,7 @@ func matchesFilter(entry LogEntry, filter LogFilter) bool {
 	// filter out DD-UI's debug logs about stream management to reduce noise
 	if len(filter.Containers) > 0 && !contains(filter.Containers, "dd-ui-app") {
 		// Check if this is DD-UI's stream management noise
-		if entry.ContainerName == "dd-ui-app" && 
+		if entry.ContainerName == "dd-ui-app" &&
 		   (strings.Contains(entry.Message, "Log stream canceled") ||
 		    strings.Contains(entry.Message, "Log stream ended") ||
 		    strings.Contains(entry.Message, "Log stream context canceled") ||
@@ -330,32 +330,32 @@ func matchesFilter(entry LogEntry, filter LogFilter) bool {
 			return false
 		}
 	}
-	
+
 	// Check levels
 	if len(filter.Levels) > 0 && !contains(filter.Levels, entry.Level) {
 		return false
 	}
-	
+
 	// Check search
 	if filter.Search != "" && !strings.Contains(strings.ToLower(entry.Message), strings.ToLower(filter.Search)) {
 		return false
 	}
-	
+
 	// Check hosts
 	if len(filter.HostNames) > 0 && !contains(filter.HostNames, entry.HostName) {
 		return false
 	}
-	
+
 	// Check stacks
 	if len(filter.StackNames) > 0 && entry.StackName != "" && !contains(filter.StackNames, entry.StackName) {
 		return false
 	}
-	
+
 	// Check containers
 	if len(filter.Containers) > 0 && !contains(filter.Containers, entry.ContainerName) {
 		return false
 	}
-	
+
 	return true
 }
 
@@ -365,48 +365,48 @@ func parseLogFilters(r *http.Request) LogFilter {
 		Follow: r.URL.Query().Get("follow") == "true",
 		Limit:  100,
 	}
-	
+
 	// Parse comma-separated values
 	if hosts := r.URL.Query().Get("hostnames"); hosts != "" {
 		filter.HostNames = strings.Split(hosts, ",")
 	}
-	
+
 	if stacks := r.URL.Query().Get("stacks"); stacks != "" {
 		filter.StackNames = strings.Split(stacks, ",")
 	}
-	
+
 	if containers := r.URL.Query().Get("containers"); containers != "" {
 		filter.Containers = strings.Split(containers, ",")
 	}
-	
+
 	if levels := r.URL.Query().Get("levels"); levels != "" {
 		filter.Levels = strings.Split(levels, ",")
 	}
-	
+
 	filter.Search = r.URL.Query().Get("search")
-	
+
 	return filter
 }
 
 // sendHistoricalLogs sends historical logs from the database
 func sendHistoricalLogs(w http.ResponseWriter, filter LogFilter) {
 	ctx := context.Background()
-	
+
 	// Query historical logs from database
 	query := `
-		SELECT id, timestamp, hostname, stack_name, service_name, 
+		SELECT id, timestamp, hostname, stack_name, service_name,
 		       container_id, level, source, message
 		FROM container_logs
 		WHERE timestamp > NOW() - INTERVAL '1 hour'
 	`
-	
+
 	rows, err := common.DB.Query(ctx, query)
 	if err != nil {
 		common.ErrorLog("Failed to query historical logs: %v", err)
 		return
 	}
 	defer rows.Close()
-	
+
 	count := 0
 	for rows.Next() {
 		var entry LogEntry
@@ -425,18 +425,18 @@ func sendHistoricalLogs(w http.ResponseWriter, filter LogFilter) {
 			common.ErrorLog("Failed to scan log row: %v", err)
 			continue
 		}
-		
+
 		if matchesFilter(entry, filter) {
 			data, _ := json.Marshal(entry)
 			fmt.Fprintf(w, "data: %s\n\n", string(data))
 			count++
-			
+
 			if count >= filter.Limit {
 				break
 			}
 		}
 	}
-	
+
 	w.(http.Flusher).Flush()
 	common.DebugLog("Sent %d historical log entries", count)
 }
@@ -484,7 +484,7 @@ func HandleGetLogSources(w http.ResponseWriter, r *http.Request) {
 		listCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 		containers, err := cli.ContainerList(listCtx, container.ListOptions{All: false})
 		cancel()
-		
+
 		if err != nil {
 			common.DebugLog("Failed to list containers on %s for log sources: %v", host.Name, err)
 			continue
@@ -493,7 +493,7 @@ func HandleGetLogSources(w http.ResponseWriter, r *http.Request) {
 		for _, cnt := range containers {
 			containerName := strings.TrimPrefix(cnt.Names[0], "/")
 			stackName := cnt.Labels["com.docker.compose.project"]
-			
+
 			sources.Containers = append(sources.Containers, struct {
 				Name  string `json:"name"`
 				Host  string `json:"host"`
@@ -503,7 +503,7 @@ func HandleGetLogSources(w http.ResponseWriter, r *http.Request) {
 				Host:  host.Name,
 				Stack: stackName,
 			})
-			
+
 			// Add unique stack names
 			if stackName != "" && !contains(sources.Stacks, stackName) {
 				sources.Stacks = append(sources.Stacks, stackName)

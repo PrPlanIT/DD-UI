@@ -13,7 +13,7 @@ export function handle401() {
   if (authCallback) {
     authCallback();
   }
-  
+
   // Force immediate redirect - don't wait
   // Use location.href to ensure full page reload
   window.location.href = '/auth/login';
@@ -21,14 +21,14 @@ export function handle401() {
 
 // Wrapper around fetch that handles 401 globally
 export async function authFetch(url: string, options?: RequestInit): Promise<Response> {
-  const response = await fetch(url, {  ...options, 
-    credentials: options?.credentials || 'include' 
+  const response = await fetch(url, {  ...options,
+    credentials: options?.credentials || 'include'
   });
-  
+
   if (response.status === 401) {
     handle401();
   }
-  
+
   return response;
 }
 

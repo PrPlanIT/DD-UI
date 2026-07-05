@@ -23,7 +23,7 @@ import (
 )
 
 func init() {
-	common.DebugLog("Cleanup handlers module initialized - functions available: %v", 
+	common.DebugLog("Cleanup handlers module initialized - functions available: %v",
 		handleCleanupBuildCachePrune != nil)
 }
 
@@ -251,10 +251,10 @@ func handleCleanupBuildCachePrune(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("Internal error: %v", err), http.StatusInternalServerError)
 		}
 	}()
-	
+
 	hostname := chi.URLParam(r, "hostname")
 	common.DebugLog("Build cache cleanup request for host: %s", hostname)
-	
+
 	if hostname == "" {
 		http.Error(w, "hostname is required", http.StatusBadRequest)
 		return
@@ -274,14 +274,14 @@ func handleCleanupBuildCachePrune(w http.ResponseWriter, r *http.Request) {
 
 	owner := getSessionUser(r)
 	common.DebugLog("Creating build cache cleanup job for host %s by user %s", hostname, owner)
-	
+
 	// Try to create a job in the database
 	job, err := createCleanupJob(r.Context(), "build_cache_prune", "single_host", hostname, owner, options)
 	if err != nil {
 		common.ErrorLog("Failed to create build cache cleanup job in DB: %v", err)
 		// If database isn't ready, execute directly without tracking
 		common.InfoLog("Executing build cache cleanup directly without job tracking")
-		
+
 		// Create a temporary job object for the response
 		job = &CleanupJob{
 			ID:        uuid.New().String(),
@@ -295,7 +295,7 @@ func handleCleanupBuildCachePrune(w http.ResponseWriter, r *http.Request) {
 			UpdatedAt: time.Now(),
 			Owner:     owner,
 		}
-		
+
 		// Execute synchronously and return result
 		result, execErr := performBuildCachePrune(r.Context(), hostname, options)
 		if execErr != nil {
@@ -307,14 +307,14 @@ func handleCleanupBuildCachePrune(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
-		
+
 		if result != nil {
 			job.Status = "completed"
 			job.Results = map[string]interface{}{
 				hostname: result,
 			}
 		}
-		
+
 		common.RespondJSON(w, job)
 		return
 	}
@@ -433,10 +433,10 @@ func handleCleanupGlobalPreview(w http.ResponseWriter, r *http.Request) {
 				Error:     err.Error(),
 			}
 		}
-		
+
 		allPreview.HostPreviews[host.Name] = preview
 		totalBytes += preview.EstimatedBytes
-		
+
 		// Sum up item counts
 		for itemType, count := range preview.ItemCount {
 			allPreview.TotalItemCount[itemType] += count
@@ -445,7 +445,7 @@ func handleCleanupGlobalPreview(w http.ResponseWriter, r *http.Request) {
 
 	allPreview.TotalBytes = totalBytes
 	allPreview.TotalSize = humanizeBytes(totalBytes)
-	
+
 	common.RespondJSON(w, allPreview)
 }
 
@@ -470,21 +470,21 @@ func handleCleanupJobStream(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	
+
 	// Send initial connection established event
 	fmt.Fprintf(w, "event: connected\ndata: {\"message\": \"Connected to cleanup job stream\"}\n\n")
 	flusher.Flush()
-	
+
 	// Wait a moment for job to be created in DB
 	time.Sleep(50 * time.Millisecond)
-	
+
 	// Send initial job status
 	if job, err := getCleanupJob(ctx, jobID); err == nil {
 		data, _ := json.Marshal(job)
 		fmt.Fprintf(w, "event: progress\ndata: %s\n\n", data)
 		flusher.Flush()
 	}
-	
+
 	ticker := time.NewTicker(500 * time.Millisecond) // Check more frequently
 	heartbeat := time.NewTicker(10 * time.Second) // Send heartbeat to keep alive
 	defer ticker.Stop()
@@ -736,7 +736,7 @@ func executeCleanupJobAllHosts(jobID, operation string, options CleanupOptions) 
 				}
 			}
 			completedHosts++
-			
+
 			// Update progress
 			updateJobProgress(ctx, jobID, map[string]interface{}{
 				"total_hosts":     len(hosts),
@@ -762,7 +762,7 @@ func createCleanupJob(ctx context.Context, operation, scope, target, owner strin
 	if common.DB == nil {
 		return nil, fmt.Errorf("database connection not available")
 	}
-	
+
 	job := &CleanupJob{
 		ID:        uuid.New().String(),
 		Operation: operation,
@@ -786,20 +786,20 @@ func createCleanupJob(ctx context.Context, operation, scope, target, owner strin
 	var tableExists bool
 	err := common.DB.QueryRow(ctx, `
 		SELECT EXISTS (
-			SELECT FROM information_schema.tables 
-			WHERE table_schema = 'public' 
+			SELECT FROM information_schema.tables
+			WHERE table_schema = 'public'
 			AND table_name = 'cleanup_jobs'
 		)
 	`).Scan(&tableExists)
-	
+
 	if err != nil {
 		common.ErrorLog("Failed to check if cleanup_jobs table exists: %v", err)
 		return nil, fmt.Errorf("failed to check cleanup_jobs table: %w", err)
 	}
-	
+
 	if !tableExists {
 		common.InfoLog("Creating cleanup_jobs table...")
-		
+
 		// Create the table
 		_, err = common.DB.Exec(ctx, `
 			CREATE TABLE IF NOT EXISTS cleanup_jobs (
@@ -820,17 +820,17 @@ func createCleanupJob(ctx context.Context, operation, scope, target, owner strin
 				owner VARCHAR(255)
 			)
 		`)
-		
+
 		if err != nil {
 			common.ErrorLog("Failed to create cleanup_jobs table: %v", err)
 			return nil, fmt.Errorf("failed to create cleanup_jobs table: %w", err)
 		}
-		
+
 		// Create indexes
 		common.DB.Exec(ctx, "CREATE INDEX IF NOT EXISTS idx_cleanup_jobs_status ON cleanup_jobs(status)")
 		common.DB.Exec(ctx, "CREATE INDEX IF NOT EXISTS idx_cleanup_jobs_created_at ON cleanup_jobs(created_at DESC)")
 		common.DB.Exec(ctx, "CREATE INDEX IF NOT EXISTS idx_cleanup_jobs_owner ON cleanup_jobs(owner)")
-		
+
 		common.InfoLog("Successfully created cleanup_jobs table")
 	}
 
@@ -851,11 +851,11 @@ func createCleanupJob(ctx context.Context, operation, scope, target, owner strin
 // updateJobProgress updates the progress of a cleanup job
 func updateJobProgress(ctx context.Context, jobID string, progress map[string]interface{}) error {
 	progressJSON, _ := json.Marshal(progress)
-	
+
 	common.DebugLog("Updating job %s progress: %s", jobID, string(progressJSON))
-	
+
 	_, err := common.DB.Exec(ctx, `
-		UPDATE cleanup_jobs 
+		UPDATE cleanup_jobs
 		SET progress = $1
 		WHERE id = $2
 	`, string(progressJSON), jobID)
@@ -863,7 +863,7 @@ func updateJobProgress(ctx context.Context, jobID string, progress map[string]in
 	if err != nil {
 		common.ErrorLog("Failed to update job progress for %s: %v", jobID, err)
 	}
-	
+
 	return err
 }
 
@@ -892,9 +892,9 @@ func updateJobStatus(ctx context.Context, jobID, status string) error {
 // updateJobResults updates the results of a cleanup job
 func updateJobResults(ctx context.Context, jobID string, results map[string]interface{}) error {
 	resultsJSON, _ := json.Marshal(results)
-	
+
 	_, err := common.DB.Exec(ctx, `
-		UPDATE cleanup_jobs 
+		UPDATE cleanup_jobs
 		SET results = $1
 		WHERE id = $2
 	`, string(resultsJSON), jobID)
@@ -908,9 +908,9 @@ func getCleanupJob(ctx context.Context, jobID string) (*CleanupJob, error) {
 	var excludeFiltersJSON, progressJSON, resultsJSON string
 
 	err := common.DB.QueryRow(ctx, `
-		SELECT id, operation, scope, target, status, dry_run, force, 
+		SELECT id, operation, scope, target, status, dry_run, force,
 		       created_at, started_at, completed_at, exclude_filters, progress, results, owner
-		FROM cleanup_jobs 
+		FROM cleanup_jobs
 		WHERE id = $1
 	`, jobID).Scan(&job.ID, &job.Operation, &job.Scope, &job.Target, &job.Status, &job.DryRun, &job.Force,
 		&job.CreatedAt, &job.StartedAt, &job.CompletedAt, &excludeFiltersJSON, &progressJSON, &resultsJSON, &job.Owner)
@@ -929,7 +929,7 @@ func getCleanupJob(ctx context.Context, jobID string) (*CleanupJob, error) {
 // performSystemPrune executes docker system prune on a specific host
 func performSystemPrune(ctx context.Context, hostName string, options CleanupOptions) (*CleanupResult, error) {
 	common.DebugLog("Starting system prune on host %s (dry_run: %t)", hostName, options.DryRun)
-	
+
 	host, err := database.GetHostByName(ctx, hostName)
 	if err != nil {
 		return nil, fmt.Errorf("host not found: %w", err)
@@ -991,7 +991,7 @@ func performSystemPrune(ctx context.Context, hostName string, options CleanupOpt
 // performImagePrune executes docker image prune on a specific host
 func performImagePrune(ctx context.Context, hostName string, options CleanupOptions) (*CleanupResult, error) {
 	common.DebugLog("Starting image prune on host %s (dry_run: %t)", hostName, options.DryRun)
-	
+
 	host, err := database.GetHostByName(ctx, hostName)
 	if err != nil {
 		return nil, fmt.Errorf("host not found: %w", err)
@@ -1029,7 +1029,7 @@ func performImagePrune(ctx context.Context, hostName string, options CleanupOpti
 // performContainerPrune executes docker container prune on a specific host
 func performContainerPrune(ctx context.Context, hostName string, options CleanupOptions) (*CleanupResult, error) {
 	common.DebugLog("Starting container prune on host %s (dry_run: %t)", hostName, options.DryRun)
-	
+
 	host, err := database.GetHostByName(ctx, hostName)
 	if err != nil {
 		return nil, fmt.Errorf("host not found: %w", err)
@@ -1067,7 +1067,7 @@ func performContainerPrune(ctx context.Context, hostName string, options Cleanup
 // performVolumePrune executes docker volume prune on a specific host
 func performVolumePrune(ctx context.Context, hostName string, options CleanupOptions) (*CleanupResult, error) {
 	common.DebugLog("Starting volume prune on host %s (dry_run: %t)", hostName, options.DryRun)
-	
+
 	host, err := database.GetHostByName(ctx, hostName)
 	if err != nil {
 		return nil, fmt.Errorf("host not found: %w", err)
@@ -1105,7 +1105,7 @@ func performVolumePrune(ctx context.Context, hostName string, options CleanupOpt
 // performNetworkPrune executes docker network prune on a specific host
 func performNetworkPrune(ctx context.Context, hostName string, options CleanupOptions) (*CleanupResult, error) {
 	common.DebugLog("Starting network prune on host %s (dry_run: %t)", hostName, options.DryRun)
-	
+
 	host, err := database.GetHostByName(ctx, hostName)
 	if err != nil {
 		return nil, fmt.Errorf("host not found: %w", err)
@@ -1142,7 +1142,7 @@ func performNetworkPrune(ctx context.Context, hostName string, options CleanupOp
 // performBuildCachePrune executes docker buildx prune on a specific host
 func performBuildCachePrune(ctx context.Context, hostName string, options CleanupOptions) (*CleanupResult, error) {
 	common.InfoLog("Starting build cache cleanup on %s...", hostName)
-	
+
 	host, err := database.GetHostByName(ctx, hostName)
 	if err != nil {
 		return nil, fmt.Errorf("host not found: %w", err)
@@ -1162,7 +1162,7 @@ func performBuildCachePrune(ctx context.Context, hostName string, options Cleanu
 	}
 
 	common.InfoLog("Removing build cache on %s (this may take a moment)...", hostName)
-	
+
 	// Try buildx first, fallback to builder
 	cmd := "docker buildx prune -af 2>/dev/null || docker builder prune -af"
 	output, err := runDockerCommand(host, cmd)
@@ -1174,12 +1174,12 @@ func performBuildCachePrune(ctx context.Context, hostName string, options Cleanu
 
 	spaceReclaimed := parseDockerPruneOutput(output)
 	result.SpaceReclaimed = spaceReclaimed
-	
+
 	// Parse output to count removed items
 	lines := strings.Split(output, "\n")
 	removedCount := 0
 	for _, line := range lines {
-		if strings.Contains(line, "deleted:") || strings.Contains(line, "Deleted:") || 
+		if strings.Contains(line, "deleted:") || strings.Contains(line, "Deleted:") ||
 		   strings.Contains(line, "Total reclaimed space:") {
 			removedCount++
 		}
@@ -1197,7 +1197,7 @@ func performBuildCachePrune(ctx context.Context, hostName string, options Cleanu
 // runDockerCommand executes a Docker command using the appropriate method (local Docker client or SSH)
 func runDockerCommand(host database.HostRow, command string) (string, error) {
 	url, _ := services.DockerURLFor(host)
-	
+
 	// For local Docker socket access, use direct execution
 	if strings.HasPrefix(url, "unix://") && services.LocalHostAllowed(host) {
 		// Local execution via Docker socket
@@ -1305,7 +1305,7 @@ func getSpacePreview(ctx context.Context, hostName string, operation string) (pr
 
 		// Calculate reclaimable space from all components
 		var totalReclaimable int64
-		
+
 		// Images
 		for _, img := range diskUsage.Images {
 			if img.Containers == 0 { // Unused images
@@ -1431,12 +1431,12 @@ func getSpacePreview(ctx context.Context, hostName string, operation string) (pr
 			if net.Name == "bridge" || net.Name == "host" || net.Name == "none" {
 				continue
 			}
-			
+
 			// Skip networks that are in use
 			if networksInUse[net.Name] {
 				continue
 			}
-			
+
 			// This network is unused and can be removed
 			preview.ItemCount["networks"]++
 			unusedNetworks = append(unusedNetworks, net.Name)

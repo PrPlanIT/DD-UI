@@ -27,10 +27,10 @@ export default function App() {
   const [sessionChecked, setSessionChecked] = useState(false);
   const [authed, setAuthed] = useState<boolean>(false);
   const [filterQuery, setFilterQuery] = useState("");
-  
+
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Register global auth failure handler
   useEffect(() => {
     setAuthFailureCallback(() => {
@@ -38,12 +38,12 @@ export default function App() {
       setSessionChecked(true);
     });
   }, []);
-  
+
   // Check authentication on every route change
   useEffect(() => {
     // Always check on route changes, even if not currently authed
     if (!sessionChecked) return;
-    
+
     // Verify session is still valid on route changes
     fetch("/api/session", { credentials: "include" }) .then(r => {
         if (r.status === 401) {
@@ -59,7 +59,7 @@ export default function App() {
         window.location.href = '/auth/login';
       });
   }, [location.pathname]); // Re-check on every route change
-  
+
   // Determine current page from URL (for LeftNav highlight)
   const getCurrentPage = () => {
     const path = location.pathname;
@@ -86,10 +86,10 @@ export default function App() {
   const getBestHost = () => {
     const urlHost = currentHostFromPath();
     if (urlHost) return urlHost;
-    
+
     const stored = localStorage.getItem('dd_ui_selected_host');
     if (stored && hosts.some(h => h.name === stored)) return stored;
-    
+
     return hosts[0]?.name || "";
   };
 
@@ -148,7 +148,7 @@ export default function App() {
   // Periodic session validation (every 30 seconds)
   useEffect(() => {
     if (!authed) return;
-    
+
     const interval = setInterval(() => {
       fetch("/api/session", { credentials: "include" }) .then(r => {
           if (r.status === 401) {
@@ -161,7 +161,7 @@ export default function App() {
           // Network error - keep trying
         });
     }, 30000); // Check every 30 seconds
-    
+
     return () => clearInterval(interval);
   }, [authed]);
 
@@ -191,13 +191,13 @@ export default function App() {
           const iacJson = await ri.json();
           const runtime: ApiContainer[] = (contJson.containers || []) as ApiContainer[];
           const iacStacks: IacStack[] = (iacJson.stacks || []) as IacStack[];
-          
+
           // Count actual drift from backend's drift_detected field
           let driftCount = 0;
           if (Array.isArray(iacJson.stacks)) {
             driftCount = iacJson.stacks.filter((s: any) => s.drift_detected === true).length;
           }
-          
+
           // Use backend drift count instead of frontend calculation
           const m = computeHostMetrics(runtime, iacStacks);
           m.drift = driftCount; // Override with backend's drift detection
@@ -238,7 +238,7 @@ export default function App() {
   if (!sessionChecked) {
     return <div className="min-h-screen bg-slate-950" />;
   }
-  
+
   if (!authed) {
     return <LoginGate />;
   }
@@ -250,7 +250,7 @@ export default function App() {
     const { hostName } = useParams<{ hostName: string }>();
     const decodedHostName = hostName ? decodeURIComponent(hostName) : "";
     const host = hosts.find(h => h.name === decodedHostName);
-    
+
     // Show loading if hosts are still loading
     if (loading) {
       return (
@@ -262,13 +262,13 @@ export default function App() {
         </div>
       );
     }
-    
+
     // If hosts are loaded but host not found, redirect to hosts page
     if (!host) {
       navigate("/hosts");
       return null;
     }
-    
+
     return (
       <HostStacksView
         key={hostName || "all"}
@@ -361,7 +361,7 @@ export default function App() {
           <Routes>
             {/* Dashboard */}
             <Route path="/dashboard" element={<DashboardView hosts={hosts} />} />
-            
+
             {/* Infrastructure routes */}
             <Route path="/hosts" element={
               <HostsView
@@ -381,22 +381,22 @@ export default function App() {
             <Route path="/hosts/:hostName/stacks" element={<HostStacksPage />} />
             <Route path="/hosts/:hostName/stacks/:stackName" element={<StackDetailPage />} />
             <Route path="/groups" element={<GroupsView hosts={hosts} />} />
-            
+
             {/* Cleanup routes */}
             <Route path="/cleanup" element={<CleanupView hosts={hosts} loading={loading} />} />
             <Route path="/hosts/:hostName/cleanup" element={<CleanupView hosts={hosts} loading={loading} />} />
-            
+
             {/* Logging route */}
             <Route path="/logging" element={<LoggingView />} />
-            
+
             {/* Git Sync route */}
             <Route path="/git" element={<GitSyncView />} />
-            
+
             {/* Resource routes */}
             <Route path="/hosts/:hostName/images" element={<HostImagesPage />} />
             <Route path="/hosts/:hostName/networks" element={<HostNetworksPage />} />
             <Route path="/hosts/:hostName/volumes" element={<HostVolumesPage />} />
-            
+
             {/* Default and catch-all */}
             <Route path="/" element={<DashboardView hosts={hosts} />} />
             <Route path="*" element={
@@ -404,8 +404,8 @@ export default function App() {
                 <div className="text-center">
                   <h1 className="text-2xl mb-4 text-white">Page Not Found</h1>
                   <p className="text-slate-300 mb-6">The page you're looking for doesn't exist.</p>
-                  <button 
-                    onClick={() => navigate('/dashboard')} 
+                  <button
+                    onClick={() => navigate('/dashboard')}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
                   >
                     Go to Dashboard

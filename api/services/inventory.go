@@ -26,7 +26,7 @@ func InitInventory() error {
 	// Build path from IAC root and inventory file
 	iacRoot := common.Env("DD_UI_IAC_ROOT", "/data")
 	invFile := common.Env("DD_UI_INVENTORY_FILE", "")
-	
+
 	var p string
 	if invFile != "" {
 		// Use explicit inventory file path relative to IAC root
@@ -36,7 +36,7 @@ func InitInventory() error {
 			p = ""
 		}
 	}
-	
+
 	if p == "" {
 		// Fall back to searching for inventory file
 		p = findInventoryPath()
@@ -86,11 +86,11 @@ func GetHosts() []common.Host {
 
 func findInventoryPath() string {
 	iacRoot := common.Env("DD_UI_IAC_ROOT", "/data")
-	
+
 	// Check new default location first
 	cands := []string{
 		iacRoot + "/ansible/inventory.yaml",
-		iacRoot + "/ansible/inventory.yml", 
+		iacRoot + "/ansible/inventory.yml",
 		iacRoot + "/ansible/inventory",
 		// Fallback to old locations for backward compatibility
 		iacRoot + "/inventory",

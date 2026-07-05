@@ -73,7 +73,7 @@ func GetContainerCount(ctx context.Context) (int, error) {
 func GetStacksByHost(ctx context.Context, hostname string) ([]Stack, error) {
 	query := `
 		SELECT DISTINCT ON (s.name)
-			s.id, s.name, s.host, s.status, s.path, 
+			s.id, s.name, s.host, s.status, s.path,
 			s.created_at, s.updated_at, s.owner,
 			COUNT(c.id) as container_count
 		FROM stacks s
@@ -82,7 +82,7 @@ func GetStacksByHost(ctx context.Context, hostname string) ([]Stack, error) {
 		GROUP BY s.id, s.name, s.host, s.status, s.path, s.created_at, s.updated_at, s.owner
 		ORDER BY s.name, s.updated_at DESC
 	`
-	
+
 	rows, err := common.DB.Query(ctx, query, hostname)
 	if err != nil {
 		return nil, err
@@ -101,7 +101,7 @@ func GetStacksByHost(ctx context.Context, hostname string) ([]Stack, error) {
 		if err != nil {
 			continue
 		}
-		
+
 		// Set state based on status
 		if stack.Status == "running" && containerCount > 0 {
 			stack.State = "running"
@@ -110,7 +110,7 @@ func GetStacksByHost(ctx context.Context, hostname string) ([]Stack, error) {
 		} else {
 			stack.State = "partial"
 		}
-		
+
 		stacks = append(stacks, stack)
 	}
 

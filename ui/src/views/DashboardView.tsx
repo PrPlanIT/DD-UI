@@ -7,16 +7,16 @@ import { handle401 } from "@/utils/auth";
 
 export default function DashboardView({ hosts }: { hosts: Host[] }) {
   const [metricsCache, setMetricsCache] = useState<Record<string, { stacks: number; containers: number; drift: number; errors: number }>>({});
-  
+
   useEffect(() => {
     if (!hosts.length) return;
-    
+
     async function fetchMetrics() {
-      const limit = 4; 
+      const limit = 4;
       let idx = 0;
       const workers = Array.from({ length: Math.min(limit, hosts.length) }, () => (async () => {
         while (true) {
-          const i = idx++; 
+          const i = idx++;
           if (i >= hosts.length) break;
           const name = hosts[i].name;
           try {
@@ -24,21 +24,21 @@ export default function DashboardView({ hosts }: { hosts: Host[] }) {
               fetch(`/api/containers/hosts/${encodeURIComponent(name)}`, { credentials: "include" }),
               fetch(`/api/iac/scopes/${encodeURIComponent(name)}`, { credentials: "include" }),
             ]);
-            if (rc.status === 401 || ri.status === 401) { 
-              handle401(); 
-              return; 
+            if (rc.status === 401 || ri.status === 401) {
+              handle401();
+              return;
             }
             const contJson = await rc.json();
             const iacJson = await ri.json();
             const runtime: ApiContainer[] = (contJson.containers || []) as ApiContainer[];
             const iacStacks: IacStack[] = (iacJson.stacks || []) as IacStack[];
-            
+
             // Count actual drift from backend's drift_detected field
             let driftCount = 0;
             if (Array.isArray(iacJson.stacks)) {
               driftCount = iacJson.stacks.filter((s: any) => s.drift_detected === true).length;
             }
-            
+
             // Use backend drift count instead of frontend calculation
             const m = computeHostMetrics(runtime, iacStacks);
             m.drift = driftCount; // Override with backend's drift detection
@@ -50,7 +50,7 @@ export default function DashboardView({ hosts }: { hosts: Host[] }) {
       })());
       await Promise.all(workers);
     }
-    
+
     fetchMetrics();
   }, [hosts]);
 
@@ -59,9 +59,9 @@ export default function DashboardView({ hosts }: { hosts: Host[] }) {
     for (const h of hosts) {
       const m = metricsCache[h.name];
       if (!m) continue;
-      stacks += m.stacks; 
-      containers += m.containers; 
-      drift += m.drift; 
+      stacks += m.stacks;
+      containers += m.containers;
+      drift += m.drift;
       errors += m.errors;
     }
     return { hosts: hosts.length, stacks, containers, drift, errors };
@@ -89,12 +89,12 @@ export default function DashboardView({ hosts }: { hosts: Host[] }) {
           <div className="text-4xl">🚀</div>
           <div className="text-2xl font-semibold text-white">Welcome to DD-UI!</div>
           <div className="text-slate-300 leading-relaxed">
-            DD-UI is a project that desires to bring the spirit of GitOps and projects like ArgoCD & FluxCD to Docker. 
+            DD-UI is a project that desires to bring the spirit of GitOps and projects like ArgoCD & FluxCD to Docker.
           </div>
           <div className="text-slate-400 leading-relaxed">
-            We feature an automated adoption process that helps any user who is comfortable with docker compose to implement 
-            a basic but effective and minimally configurable CD pipeline based on a static path structure and ansible 
-            inventory files featuring SOPS encryption for simple & easily manageable secrets contained in .env and even 
+            We feature an automated adoption process that helps any user who is comfortable with docker compose to implement
+            a basic but effective and minimally configurable CD pipeline based on a static path structure and ansible
+            inventory files featuring SOPS encryption for simple & easily manageable secrets contained in .env and even
             compose can be encrypted and deploys decrypted at runtime.
           </div>
         </div>

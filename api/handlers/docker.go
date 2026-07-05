@@ -32,7 +32,7 @@ import (
 // This organizes the Docker management functionality from web.go into logical groups:
 // - Container operations (list, logs, inspect, actions, stats)
 // - Image operations (list, delete)
-// - Network operations (list, delete) 
+// - Network operations (list, delete)
 // - Volume operations (list, delete)
 // - WebSocket container exec
 func SetupDockerRoutes(router chi.Router) {
@@ -51,7 +51,7 @@ func SetupDockerRoutes(router chi.Router) {
 			})
 		})
 	})
-	
+
 	// Image operations
 	router.Route("/images", func(r chi.Router) {
 		r.Route("/hosts/{hostname}", func(r chi.Router) {
@@ -59,15 +59,15 @@ func SetupDockerRoutes(router chi.Router) {
 			r.Post("/delete", handleImagesDelete)
 		})
 	})
-	
-	// Network operations  
+
+	// Network operations
 	router.Route("/networks", func(r chi.Router) {
 		r.Route("/hosts/{hostname}", func(r chi.Router) {
 			r.Get("/", handleNetworksList)
 			r.Post("/delete", handleNetworksDelete)
 		})
 	})
-	
+
 	// Volume operations
 	router.Route("/volumes", func(r chi.Router) {
 		r.Route("/hosts/{hostname}", func(r chi.Router) {
@@ -75,7 +75,7 @@ func SetupDockerRoutes(router chi.Router) {
 			r.Post("/delete", handleVolumesDelete)
 		})
 	})
-	
+
 	// WebSocket container exec
 	router.Get("/ws/hosts/{name}/containers/{ctr}/exec", handleContainerExec)
 }
@@ -87,7 +87,7 @@ func SetupDockerRoutes(router chi.Router) {
 func handleContainersList(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	hostname := chi.URLParam(r, "hostname")
-	
+
 	// Check if we want cached data (for performance)
 	if r.URL.Query().Get("cached") == "true" {
 		containers, err := database.ListContainersByHost(ctx, hostname)
@@ -98,14 +98,14 @@ func handleContainersList(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"containers": containers, "cached": true})
 		return
 	}
-	
+
 	// Fetch LIVE data - trigger a scan to update database
 	_, err := services.ScanHostContainers(ctx, hostname)
 	if err != nil {
 		common.WarnLog("Failed to scan host %s: %v", hostname, err)
 		// Fall back to cached data if scan fails
 	}
-	
+
 	// Now return the fresh data from database
 	containers, err := database.ListContainersByHost(ctx, hostname)
 	if err != nil {
@@ -255,21 +255,21 @@ func handleContainerLogs(w http.ResponseWriter, r *http.Request) {
 func handleContainerInspect(w http.ResponseWriter, r *http.Request) {
 	hostname := chi.URLParam(r, "hostname")
 	ctr := chi.URLParam(r, "ctr")
-	
+
 	// First get basic data from database
 	dbData, err := database.GetContainerByHostAndName(r.Context(), hostname, ctr)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	
+
 	// Try to get fresh inspection data from Docker
 	h, err := database.GetHostByName(r.Context(), hostname)
 	if err == nil {
 		cli, err := services.DockerClientForHost(h)
 		if err == nil {
 			defer cli.Close()
-			
+
 			// Get fresh inspection from Docker
 			info, err := cli.ContainerInspect(r.Context(), ctr)
 			if err == nil {
@@ -296,29 +296,29 @@ func handleContainerInspect(w http.ResponseWriter, r *http.Request) {
 					"compose_service": dbData.ComposeSvc,
 					"owner":           dbData.Owner,
 					"updated_at":      dbData.UpdatedAt,
-					
+
 					// Fresh Docker inspection data
 					"cmd":            info.Config.Cmd,
 					"entrypoint":     info.Config.Entrypoint,
 					"restart_policy": "",
 				}
-				
+
 				// Get restart policy
 				if info.HostConfig != nil && info.HostConfig.RestartPolicy.Name != "" {
 					enhancedData["restart_policy"] = string(info.HostConfig.RestartPolicy.Name)
 					if info.HostConfig.RestartPolicy.MaximumRetryCount > 0 {
-						enhancedData["restart_policy"] = fmt.Sprintf("%s:%d", 
-							info.HostConfig.RestartPolicy.Name, 
+						enhancedData["restart_policy"] = fmt.Sprintf("%s:%d",
+							info.HostConfig.RestartPolicy.Name,
 							info.HostConfig.RestartPolicy.MaximumRetryCount)
 					}
 				}
-				
+
 				writeJSON(w, http.StatusOK, enhancedData)
 				return
 			}
 		}
 	}
-	
+
 	// Fallback to database data if Docker inspection fails
 	writeJSON(w, http.StatusOK, dbData)
 }
@@ -502,7 +502,7 @@ func handleContainerExec(w http.ResponseWriter, r *http.Request) {
 		}
 		defer cli.Close()
 		common.DebugLog("Console: Docker client created successfully for host %s", host)
-		
+
 		// Use existing Docker client approach for local host
 		handleLocalConsole(conn, cli, host, ctr, r)
 	} else {
@@ -996,19 +996,19 @@ func handleRemoteConsole(conn *websocket.Conn, h database.HostRow, host, ctr str
 	var chosenShell []string
 	for _, cmd := range candidates {
 		common.DebugLog("Console: Testing shell %v on remote host=%s container=%s", cmd, host, ctr)
-		
+
 		// Test if the shell exists in the container via SSH + docker exec
 		testCmd := fmt.Sprintf("docker exec %s %s -c 'echo shell_test' 2>/dev/null", ctr, strings.Join(cmd, " "))
 		sshCmd := []string{
-			"ssh", "-i", keyFile, "-o", "StrictHostKeyChecking=no", 
+			"ssh", "-i", keyFile, "-o", "StrictHostKeyChecking=no",
 			"-o", "ConnectTimeout=10", fmt.Sprintf("%s@%s", user, addr), testCmd,
 		}
-		
+
 		testCtx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 		testResult := exec.CommandContext(testCtx, sshCmd[0], sshCmd[1:]...)
 		output, err := testResult.CombinedOutput()
 		cancel()
-		
+
 		if err == nil && strings.Contains(string(output), "shell_test") {
 			common.DebugLog("Console: Found working shell %v on remote host=%s container=%s", cmd, host, ctr)
 			chosenShell = cmd
@@ -1032,9 +1032,9 @@ func handleRemoteConsole(conn *websocket.Conn, h database.HostRow, host, ctr str
 	}
 
 	common.DebugLog("Console: Starting remote shell via: %v", sshCmd)
-	
+
 	cmd := exec.CommandContext(r.Context(), sshCmd[0], sshCmd[1:]...)
-	
+
 	// Create pipes for stdin/stdout/stderr
 	stdin, err := cmd.StdinPipe()
 	if err != nil {

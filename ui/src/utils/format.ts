@@ -5,7 +5,7 @@ export function formatDT(s?: string) {
     if (isNaN(d.getTime())) return s;
     return d.toLocaleString();
 }
-    
+
 export function formatPortsLines(ports: any): string[] {
     const arr: any[] =
         Array.isArray(ports) ? ports :

@@ -29,14 +29,14 @@ func CreateDeploymentStamp(ctx context.Context, stackID int64, method, user stri
 	// Get stack scope information to include in hash
 	var scopeKind, scopeName, stackName string
 	err := common.DB.QueryRow(ctx, `
-		SELECT scope_kind, scope_name, stack_name 
-		FROM iac_stacks 
+		SELECT scope_kind, scope_name, stack_name
+		FROM iac_stacks
 		WHERE id = $1
 	`, stackID).Scan(&scopeKind, &scopeName, &stackName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get stack scope: %v", err)
 	}
-	
+
 	// Generate hash including scope context
 	deploymentHash := generateDeploymentHashWithScope(config, scopeKind, scopeName, stackName)
 
@@ -47,14 +47,14 @@ func CreateDeploymentStamp(ctx context.Context, stackID int64, method, user stri
 
 	var stamp DeploymentStamp
 	err = common.DB.QueryRow(ctx, `
-		INSERT INTO deployment_stamps 
+		INSERT INTO deployment_stamps
 			(host_id, stack_id, deployment_hash, deployment_method, deployment_user, deployment_env_hash, deployment_status)
 		SELECT h.id, s.id, $2, $3, $4, $5, 'pending'
 		FROM iac_stacks s
 		LEFT JOIN hosts h ON (s.scope_kind='host' AND s.scope_name=h.name)
 		WHERE s.id = $1
-		RETURNING id, stack_id, deployment_hash, deployment_timestamp, deployment_method, 
-		          COALESCE(deployment_user, ''), COALESCE(deployment_env_hash, ''), deployment_status, 
+		RETURNING id, stack_id, deployment_hash, deployment_timestamp, deployment_method,
+		          COALESCE(deployment_user, ''), COALESCE(deployment_env_hash, ''), deployment_status,
 		          created_at, updated_at
 	`, stackID, deploymentHash, method, user, envHash).Scan(
 		&stamp.ID, &stamp.StackID, &stamp.DeploymentHash, &stamp.DeploymentTimestamp,
@@ -73,14 +73,14 @@ func CreateDeploymentStampWithHash(ctx context.Context, stackID int64, method, u
 
 	var stamp DeploymentStamp
 	err := common.DB.QueryRow(ctx, `
-		INSERT INTO deployment_stamps 
+		INSERT INTO deployment_stamps
 			(host_id, stack_id, deployment_hash, deployment_method, deployment_user, deployment_env_hash, deployment_status)
 		SELECT h.id, s.id, $2, $3, $4, $5, 'pending'
 		FROM iac_stacks s
 		LEFT JOIN hosts h ON (s.scope_kind='host' AND s.scope_name=h.name)
 		WHERE s.id = $1
-		RETURNING id, stack_id, deployment_hash, deployment_timestamp, deployment_method, 
-		          COALESCE(deployment_user, ''), COALESCE(deployment_env_hash, ''), deployment_status, 
+		RETURNING id, stack_id, deployment_hash, deployment_timestamp, deployment_method,
+		          COALESCE(deployment_user, ''), COALESCE(deployment_env_hash, ''), deployment_status,
 		          created_at, updated_at
 	`, stackID, deploymentHash, method, user, envHash).Scan(
 		&stamp.ID, &stamp.StackID, &stamp.DeploymentHash, &stamp.DeploymentTimestamp,
@@ -95,21 +95,21 @@ func CheckDeploymentStampExists(ctx context.Context, stackID int64, config []byt
 	// Get stack scope information to include in hash
 	var scopeKind, scopeName, stackName string
 	err := common.DB.QueryRow(ctx, `
-		SELECT scope_kind, scope_name, stack_name 
-		FROM iac_stacks 
+		SELECT scope_kind, scope_name, stack_name
+		FROM iac_stacks
 		WHERE id = $1
 	`, stackID).Scan(&scopeKind, &scopeName, &stackName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get stack scope: %v", err)
 	}
-	
+
 	// Generate hash including scope context
 	deploymentHash := generateDeploymentHashWithScope(config, scopeKind, scopeName, stackName)
-	
+
 	var stamp DeploymentStamp
 	err = common.DB.QueryRow(ctx, `
-		SELECT id, stack_id, deployment_hash, deployment_timestamp, deployment_method, 
-		       COALESCE(deployment_user, ''), COALESCE(deployment_env_hash, ''), deployment_status, 
+		SELECT id, stack_id, deployment_hash, deployment_timestamp, deployment_method,
+		       COALESCE(deployment_user, ''), COALESCE(deployment_env_hash, ''), deployment_status,
 		       created_at, updated_at
 		FROM deployment_stamps
 		WHERE stack_id = $1 AND deployment_hash = $2
@@ -120,7 +120,7 @@ func CheckDeploymentStampExists(ctx context.Context, stackID int64, config []byt
 		&stamp.DeploymentMethod, &stamp.DeploymentUser, &stamp.DeploymentEnvHash,
 		&stamp.DeploymentStatus, &stamp.CreatedAt, &stamp.UpdatedAt,
 	)
-	
+
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +130,7 @@ func CheckDeploymentStampExists(ctx context.Context, stackID int64, config []byt
 // UpdateDeploymentStampStatus updates the status of a deployment stamp.
 func UpdateDeploymentStampStatus(ctx context.Context, stampID int64, status string) error {
 	_, err := common.DB.Exec(ctx, `
-		UPDATE deployment_stamps 
+		UPDATE deployment_stamps
 		SET deployment_status = $1, updated_at = now()
 		WHERE id = $2
 	`, status, stampID)
@@ -166,7 +166,7 @@ func GetLatestDeploymentStamp(ctx context.Context, stackID int64) (*DeploymentSt
 // AssociateContainerWithStamp links a single container to a deployment stamp (kept for existing callers).
 func AssociateContainerWithStamp(ctx context.Context, containerID string, stampID int64, deploymentHash string) error {
 	_, err := common.DB.Exec(ctx, `
-		UPDATE containers 
+		UPDATE containers
 		SET deployment_stamp_id = $1, deployment_hash = $2, updated_at = now()
 		WHERE container_id = $3
 	`, stampID, deploymentHash, containerID)
@@ -221,7 +221,7 @@ func generateDeploymentHash(config []byte) string {
 // This ensures the same compose file deployed to different hosts/groups creates different stamps
 func generateDeploymentHashWithScope(config []byte, scopeKind, scopeName, stackName string) string {
 	h := sha256.New()
-	
+
 	// Include scope information in hash
 	h.Write([]byte(scopeKind))
 	h.Write([]byte(":"))
@@ -229,10 +229,10 @@ func generateDeploymentHashWithScope(config []byte, scopeKind, scopeName, stackN
 	h.Write([]byte(":"))
 	h.Write([]byte(stackName))
 	h.Write([]byte(":"))
-	
+
 	// Include the actual config content
 	h.Write(config)
-	
+
 	return hex.EncodeToString(h.Sum(nil))
 }
 
