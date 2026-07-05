@@ -6,6 +6,9 @@ ci:
 matchers:
   branches:
     main: "^main$"
+    # Feature branches follow the type/name convention (e.g. chore/docker-sdk-v29);
+    # the slash cleanly excludes main. Drives per-branch Harbor dev builds.
+    feature: "^[^/]+/.+$"
 
 vars:
   org: prplanit
@@ -142,6 +145,17 @@ targets:
     build: dd-ui
     tags: ["dev-{sha:8}", "latest-dev"]
     when: { branches: [main], events: [push] }
+
+  # ── Harbor: per-branch dev builds (feature branches → testable images) ──
+  # Pushing a feature branch publishes an internal image to pull onto a host and
+  # test before merge: cr.pcfae.com/prplanit/dd-ui:dev-<branch>-<sha8> (immutable)
+  # + :latest-dev-<branch> (rolling). Kept off public Docker Hub on purpose.
+  - id: harbor-branch-dev
+    kind: registry
+    registry: harbor
+    build: dd-ui
+    tags: ["dev-{branch}-{sha:8}", "latest-dev-{branch}"]
+    when: { branches: [feature], events: [push] }
 
   # ── Harbor: stable releases ─────────────────────────────────────
   - id: harbor-stable
