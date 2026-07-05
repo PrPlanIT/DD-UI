@@ -49,6 +49,8 @@ DD-UI is a **Docker management engine that puts DevOps and encryption first** �
 
 ## 📚 Documentation
 
+**[Full documentation →](docs/README.md)** — deploy, configure, and run DD-UI.
+
 - **[Installation (Docker Compose)](docs/Installation.md)** — requirements, compose example, `.env`, Nginx
 - **[Development](docs/Development.md)** — run the UI/API locally
 - **[Environment Variables](docs/Environment_Variables.md)** — all environment variables

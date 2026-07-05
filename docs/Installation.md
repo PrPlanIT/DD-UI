@@ -1,5 +1,7 @@
 # Installation (Docker Compose)
 
+> **Ready-made examples:** a runnable compose file at [`docker/docker-compose.yml`](docker/docker-compose.yml), config samples (inventory, `.env`, an example IaC stack) under [`config/`](config/README.md), and a Kubernetes/FluxCD deployment at [`kubernetes/fluxcd/`](kubernetes/README.md) — adapt at your discretion.
+
 ## Requirements
 
 - Docker reachable from the DD-UI backend to each host you list (TCP or local socket).
@@ -21,6 +23,8 @@ Mount or place your repo under a root (default `/data`) with this layout:
         .env / *.env / *_secret.env   # SOPS detection supported
         pre.sh / deploy.sh / post.sh  # optional
 ```
+See **[config/README](config/README.md)** for a worked example of this layout (`config/docker-compose/anchorage/grafana/`) and how DD-UI deploys any valid Compose you place there.
+
 - `<scope-name>` is either a host name or a group name.
 - DD-UI auto-detects if a scope matches a host in your inventory; otherwise it’s treated as a group.
 
