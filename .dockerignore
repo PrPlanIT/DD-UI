@@ -1,0 +1,35 @@
+# .dockerignore — keep the build context small and free of secrets/junk.
+# The Dockerfile only needs ui/ and api/ source + entrypoint.sh.
+
+# Version control, CI, editor/tooling config
+.git
+.gitignore
+.gitattributes
+.gitlab-ci.yml
+.stagefreight.yml
+.stagefreight/
+.github/
+.vscode/
+.idea/
+.DS_Store
+
+# Docs, examples, private notes — not shipped in the image
+docs/
+README.md
+LICENSE
+
+# Dependencies & build output (rebuilt inside the image)
+**/node_modules/
+ui/dist/
+
+# Secrets & local environment (never send these into a build context)
+.env
+.env.*
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+secrets/
+.secrets/
+stack.env
