@@ -258,6 +258,10 @@ lint:
       enabled: true
       exclude:
         - "entrypoint.sh"
+    # StageFreight-internal rule (assumes SF's by-design git-less runtime + SF's gitstate
+    # pkg). dd-ui's runtime image HAS git (apk add … git, for GitSync) — false positive here.
+    no-git-exec:
+      enabled: false
 
 release:
   enabled: true
