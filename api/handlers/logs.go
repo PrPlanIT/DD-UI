@@ -13,24 +13,24 @@ import (
 	"dd-ui/common"
 	"dd-ui/database"
 	"dd-ui/services"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
+
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 )
 
 // LogEntry represents a single log entry
 type LogEntry struct {
-	ID          int64             `json:"id,omitempty"`
-	Timestamp   string            `json:"timestamp"`
-	HostName    string            `json:"hostname"`
-	StackName   string            `json:"stack_name,omitempty"`
-	ServiceName string            `json:"service_name"`
-	ContainerID string            `json:"container_id"`
-	ContainerName string          `json:"container_name,omitempty"`
-	Level       string            `json:"level"`
-	Source      string            `json:"source"`
-	Message     string            `json:"message"`
-	Labels      map[string]string `json:"labels,omitempty"`
+	ID            int64             `json:"id,omitempty"`
+	Timestamp     string            `json:"timestamp"`
+	HostName      string            `json:"hostname"`
+	StackName     string            `json:"stack_name,omitempty"`
+	ServiceName   string            `json:"service_name"`
+	ContainerID   string            `json:"container_id"`
+	ContainerName string            `json:"container_name,omitempty"`
+	Level         string            `json:"level"`
+	Source        string            `json:"source"`
+	Message       string            `json:"message"`
+	Labels        map[string]string `json:"labels,omitempty"`
 }
 
 // LogFilter represents filtering options for logs
@@ -164,14 +164,14 @@ func collectHostLogs(ctx context.Context, host common.Host, filter LogFilter) {
 	defer cli.Close()
 
 	// List all containers
-	containers, err := cli.ContainerList(ctx, container.ListOptions{All: false})
+	containers, err := cli.ContainerList(ctx, client.ContainerListOptions{All: false})
 	if err != nil {
 		common.ErrorLog("Failed to list containers on %s: %v", host.Name, err)
 		return
 	}
 
 	// Start log collection for each container
-	for _, cnt := range containers {
+	for _, cnt := range containers.Items {
 		// Check container filter
 		if len(filter.Containers) > 0 {
 			containerName := strings.TrimPrefix(cnt.Names[0], "/")
@@ -192,7 +192,7 @@ func collectHostLogs(ctx context.Context, host common.Host, filter LogFilter) {
 }
 
 // streamContainerLogs streams logs from a single container
-func streamContainerLogs(ctx context.Context, cli *client.Client, hostName string, cnt types.Container, stackName string) {
+func streamContainerLogs(ctx context.Context, cli *client.Client, hostName string, cnt container.Summary, stackName string) {
 	containerName := strings.TrimPrefix(cnt.Names[0], "/")
 	serviceName := cnt.Labels["com.docker.compose.service"]
 	if serviceName == "" {
@@ -202,7 +202,7 @@ func streamContainerLogs(ctx context.Context, cli *client.Client, hostName strin
 	// Log at startup only, not for every message
 	common.DebugLog("Starting log stream for container %s on host %s (stack: %s)", containerName, hostName, stackName)
 
-	options := container.LogsOptions{
+	options := client.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Follow:     true,
@@ -321,11 +321,11 @@ func matchesFilter(entry LogEntry, filter LogFilter) bool {
 	if len(filter.Containers) > 0 && !contains(filter.Containers, "dd-ui-app") {
 		// Check if this is DD-UI's stream management noise
 		if entry.ContainerName == "dd-ui-app" &&
-		   (strings.Contains(entry.Message, "Log stream canceled") ||
-		    strings.Contains(entry.Message, "Log stream ended") ||
-		    strings.Contains(entry.Message, "Log stream context canceled") ||
-		    strings.Contains(entry.Message, "subscriber") ||
-		    strings.Contains(entry.Message, "Starting log stream for container")) {
+			(strings.Contains(entry.Message, "Log stream canceled") ||
+				strings.Contains(entry.Message, "Log stream ended") ||
+				strings.Contains(entry.Message, "Log stream context canceled") ||
+				strings.Contains(entry.Message, "subscriber") ||
+				strings.Contains(entry.Message, "Starting log stream for container")) {
 			// Filter out these noise messages when viewing other containers
 			return false
 		}
@@ -482,7 +482,7 @@ func HandleGetLogSources(w http.ResponseWriter, r *http.Request) {
 
 		// Use timeout for container list to avoid hanging on slow hosts
 		listCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
-		containers, err := cli.ContainerList(listCtx, container.ListOptions{All: false})
+		containers, err := cli.ContainerList(listCtx, client.ContainerListOptions{All: false})
 		cancel()
 
 		if err != nil {
@@ -490,7 +490,7 @@ func HandleGetLogSources(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		for _, cnt := range containers {
+		for _, cnt := range containers.Items {
 			containerName := strings.TrimPrefix(cnt.Names[0], "/")
 			stackName := cnt.Labels["com.docker.compose.project"]
 

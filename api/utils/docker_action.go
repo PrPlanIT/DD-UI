@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/docker/docker/api/types/container"
+	"github.com/moby/moby/client"
 )
 
 func PerformContainerAction(ctx context.Context, hostProvider HostProvider, dockerProvider DockerClientProvider, hostName, ctr, action string) error {
@@ -25,26 +25,27 @@ func PerformContainerAction(ctx context.Context, hostProvider HostProvider, dock
 
 	switch action {
 	case "start", "play":
-		return cli.ContainerStart(ctx, ctr, container.StartOptions{})
+		_, err = cli.ContainerStart(ctx, ctr, client.ContainerStartOptions{})
 	case "stop":
-		return cli.ContainerStop(ctx, ctr, container.StopOptions{Timeout: to})
+		_, err = cli.ContainerStop(ctx, ctr, client.ContainerStopOptions{Timeout: to})
 	case "kill":
 		// default to SIGKILL
-		return cli.ContainerKill(ctx, ctr, "KILL")
+		_, err = cli.ContainerKill(ctx, ctr, client.ContainerKillOptions{Signal: "KILL"})
 	case "restart":
-		return cli.ContainerRestart(ctx, ctr, container.StopOptions{Timeout: to})
+		_, err = cli.ContainerRestart(ctx, ctr, client.ContainerRestartOptions{Timeout: to})
 	case "pause":
-		return cli.ContainerPause(ctx, ctr)
+		_, err = cli.ContainerPause(ctx, ctr, client.ContainerPauseOptions{})
 	case "unpause", "resume":
-		return cli.ContainerUnpause(ctx, ctr)
+		_, err = cli.ContainerUnpause(ctx, ctr, client.ContainerUnpauseOptions{})
 	case "remove":
-		return cli.ContainerRemove(ctx, ctr, container.RemoveOptions{
+		_, err = cli.ContainerRemove(ctx, ctr, client.ContainerRemoveOptions{
 			Force:         true,
 			RemoveVolumes: false,
 		})
 	default:
 		return fmt.Errorf("unknown action: %s", action)
 	}
+	return err
 }
 
 func OneShotStats(ctx context.Context, hostProvider HostProvider, dockerProvider DockerClientProvider, hostName, ctr string) (string, error) {
@@ -59,7 +60,7 @@ func OneShotStats(ctx context.Context, hostProvider HostProvider, dockerProvider
 	defer cli.Close()
 
 	// Use non-streaming stats (read once)
-	resp, err := cli.ContainerStats(ctx, ctr, false)
+	resp, err := cli.ContainerStats(ctx, ctr, client.ContainerStatsOptions{})
 	if err != nil {
 		return "", err
 	}

@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/moby/moby/client"
 	"golang.org/x/crypto/ssh"
-	"github.com/docker/docker/client"
 )
 
 // SSHConnection holds an SSH connection and its details

@@ -14,17 +14,15 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 )
 
 // Stack drift cache data structure
 type StackDriftCache struct {
-	StackID            int64             `json:"stack_id"`
-	BundleHash         string            `json:"bundle_hash"`
-	DockerConfigCache  map[string]string `json:"docker_config_cache"`
-	LastUpdated        time.Time         `json:"last_updated"`
+	StackID           int64             `json:"stack_id"`
+	BundleHash        string            `json:"bundle_hash"`
+	DockerConfigCache map[string]string `json:"docker_config_cache"`
+	LastUpdated       time.Time         `json:"last_updated"`
 }
 
 func ComputeCurrentBundleHash(ctx context.Context, stager StackStager, stackID int64) (string, error) {
@@ -105,10 +103,10 @@ func GetActualDockerConfigHashes(ctx context.Context, stackName string, cli *cli
 	projectLabel := ComposeProjectLabelFromStack(stackName)
 
 	// Filter containers by project
-	ff := filters.NewArgs()
+	ff := client.Filters{}
 	ff.Add("label", "com.docker.compose.project="+projectLabel)
 
-	containers, err := cli.ContainerList(ctx, container.ListOptions{
+	containers, err := cli.ContainerList(ctx, client.ContainerListOptions{
 		All:     true,
 		Filters: ff,
 	})
@@ -118,7 +116,7 @@ func GetActualDockerConfigHashes(ctx context.Context, stackName string, cli *cli
 
 	// Extract config hashes (lightweight operation)
 	hashes := make(map[string]string)
-	for _, cont := range containers {
+	for _, cont := range containers.Items {
 		serviceName := ""
 		configHash := ""
 

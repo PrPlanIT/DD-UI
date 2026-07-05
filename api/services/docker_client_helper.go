@@ -4,7 +4,8 @@ package services
 import (
 	"context"
 	"dd-ui/database"
-	"github.com/docker/docker/client"
+
+	"github.com/moby/moby/client"
 )
 
 // DockerClientForHost creates a Docker client for a specific host

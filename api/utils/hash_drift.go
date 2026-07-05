@@ -3,8 +3,9 @@ package utils
 
 import (
 	"context"
+
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 )
 
 // StageStackFunc is a function type for staging stack operations

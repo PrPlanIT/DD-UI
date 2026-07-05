@@ -14,10 +14,9 @@ import (
 	"dd-ui/common"
 	"dd-ui/database"
 	"dd-ui/utils"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/client"
-	"github.com/docker/go-connections/nat"
+
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
 )
 
 // ===== helpers =====
@@ -143,7 +142,7 @@ func DockerClientForURL(ctx context.Context, url, sshCmd string) (*client.Client
 		// Test connection
 		pctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
-		_, err = cli.Ping(pctx)
+		_, err = cli.Ping(pctx, client.PingOptions{})
 		if err != nil {
 			cleanup()
 			return nil, nil, fmt.Errorf("SSH Docker connection test failed: %v", err)
@@ -178,7 +177,7 @@ func DockerClientForURL(ctx context.Context, url, sshCmd string) (*client.Client
 		}
 		pctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
-		_, err = cli.Ping(pctx)
+		_, err = cli.Ping(pctx, client.PingOptions{})
 		return err
 	})
 	if err != nil {
@@ -189,7 +188,7 @@ func DockerClientForURL(ctx context.Context, url, sshCmd string) (*client.Client
 
 // ===== small utils =====
 
-func flattenPorts(pm nat.PortMap) []map[string]any {
+func flattenPorts(pm network.PortMap) []map[string]any {
 	out := make([]map[string]any, 0, len(pm))
 	for port, binds := range pm {
 		privateStr := port.Port()
@@ -203,8 +202,12 @@ func flattenPorts(pm nat.PortMap) []map[string]any {
 		}
 		for _, b := range binds {
 			pub, _ := strconv.Atoi(b.HostPort)
+			hostIP := ""
+			if b.HostIP.IsValid() {
+				hostIP = b.HostIP.String()
+			}
 			out = append(out, map[string]any{
-				"IP": b.HostIP, "PublicPort": pub, "PrivatePort": private, "Type": typ,
+				"IP": hostIP, "PublicPort": pub, "PrivatePort": private, "Type": typ,
 			})
 		}
 	}
@@ -237,11 +240,12 @@ func ScanHostContainers(ctx context.Context, hostName string) (int, error) {
 	}
 	defer done()
 
-	list, err := cli.ContainerList(ctx, container.ListOptions{All: true, Filters: filters.NewArgs()})
+	listRes, err := cli.ContainerList(ctx, client.ContainerListOptions{All: true, Filters: client.Filters{}})
 	if err != nil {
 		database.ScanLog(ctx, h.ID, "error", "container list failed", map[string]any{"error": err.Error()})
 		return 0, err
 	}
+	list := listRes.Items
 
 	seen := make([]string, 0, len(list))
 	saved := 0
@@ -249,11 +253,12 @@ func ScanHostContainers(ctx context.Context, hostName string) (int, error) {
 	for _, c := range list {
 		seen = append(seen, c.ID)
 
-		ci, err := cli.ContainerInspect(ctx, c.ID)
+		ciRes, err := cli.ContainerInspect(ctx, c.ID, client.ContainerInspectOptions{})
 		if err != nil {
 			database.ScanLog(ctx, h.ID, "warn", "inspect failed", map[string]any{"id": c.ID, "error": err.Error()})
 			continue
 		}
+		ci := ciRes.Container
 
 		labels := map[string]string{}
 		if ci.Config != nil && ci.Config.Labels != nil {
@@ -281,12 +286,12 @@ func ScanHostContainers(ctx context.Context, hostName string) (int, error) {
 			if ci.NetworkSettings.Ports != nil {
 				portsOut = flattenPorts(ci.NetworkSettings.Ports)
 			}
-			if ci.NetworkSettings.IPAddress != "" {
-				ip = ci.NetworkSettings.IPAddress
-			} else if ci.NetworkSettings.Networks != nil {
+			// v29: NetworkSettings has no top-level IPAddress; the container IP
+			// now lives on each network endpoint (default bridge = Networks["bridge"]).
+			if ci.NetworkSettings.Networks != nil {
 				for _, ep := range ci.NetworkSettings.Networks {
-					if ep != nil && ep.IPAddress != "" {
-						ip = ep.IPAddress
+					if ep != nil && ep.IPAddress.IsValid() {
+						ip = ep.IPAddress.String()
 						break
 					}
 				}
@@ -319,7 +324,7 @@ func ScanHostContainers(ctx context.Context, hostName string) (int, error) {
 		}
 
 		if err := database.UpsertContainer(
-			ctx, h.ID, stackIDPtr, c.ID, name, c.Image, c.State, c.Status, h.Owner,
+			ctx, h.ID, stackIDPtr, c.ID, name, c.Image, string(c.State), c.Status, h.Owner,
 			createdPtr, ip, portsOut, labels, envOut, networksOut, mountsOut,
 		); err != nil {
 			database.ScanLog(ctx, h.ID, "error", "upsert container failed", map[string]any{"name": name, "id": c.ID, "error": err.Error()})
