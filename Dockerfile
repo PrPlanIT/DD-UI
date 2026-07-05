@@ -1,5 +1,5 @@
 # --- UI build ---
-FROM node:20-alpine AS ui
+FROM node:20.20.2-alpine AS ui
 WORKDIR /ui
 
 # copy lockfile if it exists
@@ -17,7 +17,7 @@ COPY ui/ .
 RUN npm run build
 
 # --- Go build ---
-FROM golang:1.25.1-alpine AS api
+FROM golang:1.25.11-alpine AS api
 WORKDIR /api
 COPY api/go.mod ./
 RUN go mod download
@@ -31,7 +31,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} \
 
 # --- Runtime ---
 # Using Alpine for smaller size and better security maintenance
-FROM alpine:3.21.0
+FROM alpine:3.21.7
 
 LABEL maintainer="SoFMeRight <sofmeright@gmail.com>" \
       org.opencontainers.image.title="DD-UI (Designated Driver UI)" \
@@ -65,7 +65,7 @@ RUN set -eux; \
       docker --version
 
 # --- Compose v2 plugin ---
-ARG COMPOSE_VERSION=2.39.3
+ARG COMPOSE_VERSION=5.3.0
 RUN set -eux; \
       # Alpine uses different arch detection
       arch="$(uname -m)"; \
