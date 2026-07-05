@@ -21,8 +21,7 @@ import (
 )
 
 func init() {
-	common.DebugLog("Cleanup handlers module initialized - functions available: %v",
-		handleCleanupBuildCachePrune != nil)
+	common.DebugLog("Cleanup handlers module initialized")
 }
 
 // CleanupOptions holds configuration for cleanup operations

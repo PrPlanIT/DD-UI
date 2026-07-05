@@ -283,6 +283,19 @@ lint:
     no-git-exec:
       enabled: false
 
+test:
+  enabled: true
+  suites:
+    # dd-ui's go.mod lives in api/, so the suite runs from there. No test files
+    # yet — this gates them the moment they're added (same as StageFreight itself).
+    - id: unit
+      tool: go
+      from: api
+      packages: [./...]
+      race: true
+      coverage: true
+      gate: perform
+
 release:
   enabled: true
   security_summary: ".stagefreight/security"
