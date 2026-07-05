@@ -254,6 +254,12 @@ lint:
           github_releases: true
         vulnerability:
           enabled: true
+        severity:
+          # Major-version-behind is advisory, not a build-blocking critical: majors
+          # (node 26, compose 5, vite 8, typescript 6, …) need a deliberate tested
+          # upgrade, they shouldn't gate every build. CVE-affected deps STILL escalate
+          # to critical via severity_override (default on), so real security keeps gating.
+          major: 1
     tabs:
       enabled: true
     secrets:
