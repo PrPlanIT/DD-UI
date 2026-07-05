@@ -28,8 +28,8 @@ secrets/
 *.dll
 *.so
 *.dylib
-dd-ui
-dd-ui.exe
+/dd-ui
+/dd-ui.exe
 
 # Test binary, built with `go test -c`
 *.test

@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: hookshot
+
+resources:
+- ../../../base/dd-ui
+- externalsecret.yaml
+- httproute.yaml
+- loadbalancer-service.yaml
+
+patches:
+- path: postgres-patch.yaml
+- path: app-patch.yaml
