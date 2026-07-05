@@ -5,7 +5,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 )
 
 // DockerClientProvider interface for getting Docker clients
@@ -67,10 +67,11 @@ func InspectContainerByHost(ctx context.Context, hostProvider HostProvider, dock
 	}
 	defer cli.Close()
 
-	info, err := cli.ContainerInspect(ctx, container)
+	infoRes, err := cli.ContainerInspect(ctx, container, client.ContainerInspectOptions{})
 	if err != nil {
 		return nil, err
 	}
+	info := infoRes.Container
 
 	out := &InspectOut{
 		ID:         info.ID,
@@ -98,9 +99,9 @@ func InspectContainerByHost(ctx context.Context, hostProvider HostProvider, dock
 
 	// State / Health
 	if info.State != nil {
-		out.State = info.State.Status
+		out.State = string(info.State.Status)
 		if info.State.Health != nil {
-			out.Health = info.State.Health.Status
+			out.Health = string(info.State.Health.Status)
 		}
 	}
 
@@ -112,7 +113,7 @@ func InspectContainerByHost(ctx context.Context, hostProvider HostProvider, dock
 	// Ports
 	if info.HostConfig != nil && info.HostConfig.PortBindings != nil {
 		for port, bindings := range info.HostConfig.PortBindings {
-			parts := strings.SplitN(string(port), "/", 2)
+			parts := strings.SplitN(port.String(), "/", 2)
 			target := parts[0]
 			proto := ""
 			if len(parts) == 2 {
@@ -127,8 +128,8 @@ func InspectContainerByHost(ctx context.Context, hostProvider HostProvider, dock
 			}
 			for _, b := range bindings {
 				pub := b.HostPort
-				if b.HostIP != "" && b.HostIP != "0.0.0.0" {
-					pub = b.HostIP + ":" + b.HostPort
+				if b.HostIP.IsValid() && !b.HostIP.IsUnspecified() {
+					pub = b.HostIP.String() + ":" + b.HostPort
 				}
 				out.Ports = append(out.Ports, PortBindingOut{
 					Published: pub,

@@ -14,33 +14,30 @@ import (
 	"dd-ui/database"
 	"dd-ui/middleware"
 	"dd-ui/services"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/api/types/network"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/moby/moby/client"
 )
 
 func init() {
-	common.DebugLog("Cleanup handlers module initialized - functions available: %v",
-		handleCleanupBuildCachePrune != nil)
+	common.DebugLog("Cleanup handlers module initialized")
 }
 
 // CleanupOptions holds configuration for cleanup operations
 type CleanupOptions struct {
-	DryRun           bool                       `json:"dry_run"`
-	Force            bool                       `json:"force"`
-	ExcludeFilters   map[string][]string        `json:"exclude_filters"`
-	ConfirmationToken string                    `json:"confirmation_token"`
+	DryRun            bool                `json:"dry_run"`
+	Force             bool                `json:"force"`
+	ExcludeFilters    map[string][]string `json:"exclude_filters"`
+	ConfirmationToken string              `json:"confirmation_token"`
 }
 
 // CleanupResult holds the result of a cleanup operation
 type CleanupResult struct {
-	SpaceReclaimed string            `json:"space_reclaimed"`
-	ItemsRemoved   map[string]int    `json:"items_removed"`
-	Errors         []string          `json:"errors"`
-	Status         string            `json:"status"`
+	SpaceReclaimed string         `json:"space_reclaimed"`
+	ItemsRemoved   map[string]int `json:"items_removed"`
+	Errors         []string       `json:"errors"`
+	Status         string         `json:"status"`
 }
 
 // CleanupJob represents a cleanup job in the database
@@ -63,13 +60,13 @@ type CleanupJob struct {
 
 // SpacePreview holds information about disk space that can be freed
 type SpacePreview struct {
-	Operation     string            `json:"operation"`
-	EstimatedSize string            `json:"estimated_size"`
-	EstimatedBytes int64            `json:"estimated_bytes"`
-	ItemCount     map[string]int    `json:"item_count"`
-	Details       []string          `json:"details"`
-	Status        string            `json:"status"`
-	Error         string            `json:"error,omitempty"`
+	Operation      string         `json:"operation"`
+	EstimatedSize  string         `json:"estimated_size"`
+	EstimatedBytes int64          `json:"estimated_bytes"`
+	ItemCount      map[string]int `json:"item_count"`
+	Details        []string       `json:"details"`
+	Status         string         `json:"status"`
+	Error          string         `json:"error,omitempty"`
 }
 
 // getSessionUser extracts the user from the request context
@@ -301,9 +298,9 @@ func handleCleanupBuildCachePrune(w http.ResponseWriter, r *http.Request) {
 		if execErr != nil {
 			job.Status = "failed"
 			common.RespondJSON(w, map[string]interface{}{
-				"id": job.ID,
+				"id":     job.ID,
 				"status": "failed",
-				"error": execErr.Error(),
+				"error":  execErr.Error(),
 			})
 			return
 		}
@@ -408,11 +405,11 @@ func handleCleanupGlobalPreview(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type AllHostsPreview struct {
-		Operation      string                    `json:"operation"`
-		TotalBytes     int64                     `json:"total_bytes"`
-		TotalSize      string                    `json:"total_size"`
-		HostPreviews   map[string]*SpacePreview  `json:"host_previews"`
-		TotalItemCount map[string]int            `json:"total_item_count"`
+		Operation      string                   `json:"operation"`
+		TotalBytes     int64                    `json:"total_bytes"`
+		TotalSize      string                   `json:"total_size"`
+		HostPreviews   map[string]*SpacePreview `json:"host_previews"`
+		TotalItemCount map[string]int           `json:"total_item_count"`
 	}
 
 	allPreview := &AllHostsPreview{
@@ -486,7 +483,7 @@ func handleCleanupJobStream(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ticker := time.NewTicker(500 * time.Millisecond) // Check more frequently
-	heartbeat := time.NewTicker(10 * time.Second) // Send heartbeat to keep alive
+	heartbeat := time.NewTicker(10 * time.Second)    // Send heartbeat to keep alive
 	defer ticker.Stop()
 	defer heartbeat.Stop()
 
@@ -560,7 +557,7 @@ func executeCleanupJob(jobID, operation, hostname string, options CleanupOptions
 	updateJobStatus(ctx, jobID, "running")
 	updateJobProgress(ctx, jobID, map[string]interface{}{
 		"message": fmt.Sprintf("Starting %s cleanup on %s...", operation, hostname),
-		"phase": "initializing",
+		"phase":   "initializing",
 	})
 
 	var result *CleanupResult
@@ -568,10 +565,10 @@ func executeCleanupJob(jobID, operation, hostname string, options CleanupOptions
 
 	// Update progress before operation
 	updateJobProgress(ctx, jobID, map[string]interface{}{
-		"message": fmt.Sprintf("🔄 Starting %s cleanup on %s...", operation, hostname),
-		"phase": "executing",
+		"message":           fmt.Sprintf("🔄 Starting %s cleanup on %s...", operation, hostname),
+		"phase":             "executing",
 		"current_operation": fmt.Sprintf("%s cleanup", operation),
-		"current_host": hostname,
+		"current_host":      hostname,
 	})
 
 	// Send more detailed progress message based on operation type
@@ -579,37 +576,37 @@ func executeCleanupJob(jobID, operation, hostname string, options CleanupOptions
 	case "system":
 		updateJobProgress(ctx, jobID, map[string]interface{}{
 			"message": "🧹 Running system prune (this may take several seconds)...",
-			"phase": "executing",
+			"phase":   "executing",
 		})
 		result, err = performSystemPrune(ctx, hostname, options)
 	case "image":
 		updateJobProgress(ctx, jobID, map[string]interface{}{
 			"message": "🖼️ Removing unused images...",
-			"phase": "executing",
+			"phase":   "executing",
 		})
 		result, err = performImagePrune(ctx, hostname, options)
 	case "container":
 		updateJobProgress(ctx, jobID, map[string]interface{}{
 			"message": "📦 Removing stopped containers...",
-			"phase": "executing",
+			"phase":   "executing",
 		})
 		result, err = performContainerPrune(ctx, hostname, options)
 	case "volume":
 		updateJobProgress(ctx, jobID, map[string]interface{}{
 			"message": "💾 Removing unused volumes...",
-			"phase": "executing",
+			"phase":   "executing",
 		})
 		result, err = performVolumePrune(ctx, hostname, options)
 	case "network":
 		updateJobProgress(ctx, jobID, map[string]interface{}{
 			"message": "🌐 Removing unused networks...",
-			"phase": "executing",
+			"phase":   "executing",
 		})
 		result, err = performNetworkPrune(ctx, hostname, options)
 	case "build-cache":
 		updateJobProgress(ctx, jobID, map[string]interface{}{
 			"message": "🔨 Clearing build cache (this may take a while)...",
-			"phase": "executing",
+			"phase":   "executing",
 		})
 		result, err = performBuildCachePrune(ctx, hostname, options)
 	default:
@@ -630,18 +627,18 @@ func executeCleanupJob(jobID, operation, hostname string, options CleanupOptions
 
 	// Update progress with completion
 	updateJobProgress(ctx, jobID, map[string]interface{}{
-		"message": fmt.Sprintf("✅ Cleanup completed on %s - reclaimed %s", hostname, result.SpaceReclaimed),
-		"phase": "completed",
+		"message":           fmt.Sprintf("✅ Cleanup completed on %s - reclaimed %s", hostname, result.SpaceReclaimed),
+		"phase":             "completed",
 		"current_operation": fmt.Sprintf("%s cleanup completed", operation),
-		"current_host": hostname,
-		"space_reclaimed": result.SpaceReclaimed,
+		"current_host":      hostname,
+		"space_reclaimed":   result.SpaceReclaimed,
 	})
 
 	// Update job with results
 	updateJobStatus(ctx, jobID, "completed")
 	updateJobResults(ctx, jobID, map[string]interface{}{
 		"space_reclaimed": result.SpaceReclaimed,
-		"removed": result.ItemsRemoved,
+		"removed":         result.ItemsRemoved,
 		hostname: map[string]interface{}{
 			"status":          result.Status,
 			"space_reclaimed": result.SpaceReclaimed,
@@ -981,7 +978,7 @@ func performSystemPrune(ctx context.Context, hostName string, options CleanupOpt
 	spaceReclaimed := parseDockerPruneOutput(output)
 	result.SpaceReclaimed = spaceReclaimed
 	if result.ItemsRemoved["containers"] == 0 && result.ItemsRemoved["images"] == 0 {
-		result.ItemsRemoved["system"] = 1  // Fallback if no specific counts
+		result.ItemsRemoved["system"] = 1 // Fallback if no specific counts
 	}
 
 	common.DebugLog("System prune completed on %s: %s reclaimed", hostName, result.SpaceReclaimed)
@@ -1180,7 +1177,7 @@ func performBuildCachePrune(ctx context.Context, hostName string, options Cleanu
 	removedCount := 0
 	for _, line := range lines {
 		if strings.Contains(line, "deleted:") || strings.Contains(line, "Deleted:") ||
-		   strings.Contains(line, "Total reclaimed space:") {
+			strings.Contains(line, "Total reclaimed space:") {
 			removedCount++
 		}
 	}
@@ -1273,11 +1270,11 @@ func getSpacePreview(ctx context.Context, hostName string, operation string) (pr
 	common.DebugLog("Getting space preview for %s operation on host %s", operation, hostName)
 
 	preview = &SpacePreview{
-		Operation:  operation,
-		ItemCount:  make(map[string]int),
-		Details:    []string{},
-		Status:     "success",
-		EstimatedSize: "0B",
+		Operation:      operation,
+		ItemCount:      make(map[string]int),
+		Details:        []string{},
+		Status:         "success",
+		EstimatedSize:  "0B",
 		EstimatedBytes: 0,
 	}
 
@@ -1298,7 +1295,7 @@ func getSpacePreview(ctx context.Context, hostName string, operation string) (pr
 	switch operation {
 	case "system":
 		// Docker system df to get overall usage
-		diskUsage, err := cli.DiskUsage(ctx, types.DiskUsageOptions{})
+		diskUsage, err := cli.DiskUsage(ctx, client.DiskUsageOptions{Containers: true, Images: true, Volumes: true, BuildCache: true, Verbose: true})
 		if err != nil {
 			return nil, fmt.Errorf("failed to get disk usage: %w", err)
 		}
@@ -1307,7 +1304,7 @@ func getSpacePreview(ctx context.Context, hostName string, operation string) (pr
 		var totalReclaimable int64
 
 		// Images
-		for _, img := range diskUsage.Images {
+		for _, img := range diskUsage.Images.Items {
 			if img.Containers == 0 { // Unused images
 				totalReclaimable += img.Size
 				preview.ItemCount["images"]++
@@ -1315,7 +1312,7 @@ func getSpacePreview(ctx context.Context, hostName string, operation string) (pr
 		}
 
 		// Containers
-		for _, container := range diskUsage.Containers {
+		for _, container := range diskUsage.Containers.Items {
 			if container.State != "running" {
 				totalReclaimable += container.SizeRw
 				preview.ItemCount["containers"]++
@@ -1323,7 +1320,7 @@ func getSpacePreview(ctx context.Context, hostName string, operation string) (pr
 		}
 
 		// Volumes
-		for _, vol := range diskUsage.Volumes {
+		for _, vol := range diskUsage.Volumes.Items {
 			if vol.UsageData.RefCount == 0 { // Unused volumes
 				totalReclaimable += vol.UsageData.Size
 				preview.ItemCount["volumes"]++
@@ -1331,8 +1328,8 @@ func getSpacePreview(ctx context.Context, hostName string, operation string) (pr
 		}
 
 		// Build cache
-		if diskUsage.BuildCache != nil {
-			for _, cache := range diskUsage.BuildCache {
+		{
+			for _, cache := range diskUsage.BuildCache.Items {
 				totalReclaimable += cache.Size
 				preview.ItemCount["build_cache"]++
 			}
@@ -1344,13 +1341,13 @@ func getSpacePreview(ctx context.Context, hostName string, operation string) (pr
 
 	case "images":
 		// Get unused images
-		diskUsage, err := cli.DiskUsage(ctx, types.DiskUsageOptions{})
+		diskUsage, err := cli.DiskUsage(ctx, client.DiskUsageOptions{Containers: true, Images: true, Volumes: true, BuildCache: true, Verbose: true})
 		if err != nil {
 			return nil, fmt.Errorf("failed to get disk usage: %w", err)
 		}
 
 		var totalSize int64
-		for _, img := range diskUsage.Images {
+		for _, img := range diskUsage.Images.Items {
 			if img.Containers == 0 { // Unused images
 				totalSize += img.Size
 				preview.ItemCount["images"]++
@@ -1363,33 +1360,33 @@ func getSpacePreview(ctx context.Context, hostName string, operation string) (pr
 
 	case "containers":
 		// Get stopped containers
-		containers, err := cli.ContainerList(ctx, container.ListOptions{
-			All: true,
-			Filters: filters.NewArgs(filters.Arg("status", "exited")),
+		containers, err := cli.ContainerList(ctx, client.ContainerListOptions{
+			All:     true,
+			Filters: client.Filters{}.Add("status", "exited"),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to list containers: %w", err)
 		}
 
 		var totalSize int64
-		for _, c := range containers {
+		for _, c := range containers.Items {
 			totalSize += c.SizeRw
 			preview.ItemCount["containers"]++
 		}
 
 		preview.EstimatedBytes = totalSize
 		preview.EstimatedSize = humanizeBytes(totalSize)
-		preview.Details = append(preview.Details, fmt.Sprintf("%d stopped containers", len(containers)))
+		preview.Details = append(preview.Details, fmt.Sprintf("%d stopped containers", len(containers.Items)))
 
 	case "volumes":
 		// Get unused volumes
-		diskUsage, err := cli.DiskUsage(ctx, types.DiskUsageOptions{})
+		diskUsage, err := cli.DiskUsage(ctx, client.DiskUsageOptions{Containers: true, Images: true, Volumes: true, BuildCache: true, Verbose: true})
 		if err != nil {
 			return nil, fmt.Errorf("failed to get disk usage: %w", err)
 		}
 
 		var totalSize int64
-		for _, vol := range diskUsage.Volumes {
+		for _, vol := range diskUsage.Volumes.Items {
 			if vol.UsageData.RefCount == 0 { // Unused volumes
 				totalSize += vol.UsageData.Size
 				preview.ItemCount["volumes"]++
@@ -1402,20 +1399,20 @@ func getSpacePreview(ctx context.Context, hostName string, operation string) (pr
 
 	case "networks":
 		// Get all networks
-		networks, err := cli.NetworkList(ctx, network.ListOptions{})
+		networks, err := cli.NetworkList(ctx, client.NetworkListOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("failed to list networks: %w", err)
 		}
 
 		// Get all containers to check which networks are in use
-		containers, err := cli.ContainerList(ctx, container.ListOptions{All: true})
+		containers, err := cli.ContainerList(ctx, client.ContainerListOptions{All: true})
 		if err != nil {
 			return nil, fmt.Errorf("failed to list containers: %w", err)
 		}
 
 		// Build a set of networks that are in use
 		networksInUse := make(map[string]bool)
-		for _, c := range containers {
+		for _, c := range containers.Items {
 			// Check both NetworkMode and Networks
 			if c.NetworkSettings != nil {
 				for netName := range c.NetworkSettings.Networks {
@@ -1426,7 +1423,7 @@ func getSpacePreview(ctx context.Context, hostName string, operation string) (pr
 
 		// Count only unused custom networks
 		unusedNetworks := []string{}
-		for _, net := range networks {
+		for _, net := range networks.Items {
 			// Skip default networks
 			if net.Name == "bridge" || net.Name == "host" || net.Name == "none" {
 				continue
@@ -1462,14 +1459,14 @@ func getSpacePreview(ctx context.Context, hostName string, operation string) (pr
 
 	case "build-cache":
 		// Get build cache usage
-		diskUsage, err := cli.DiskUsage(ctx, types.DiskUsageOptions{})
+		diskUsage, err := cli.DiskUsage(ctx, client.DiskUsageOptions{Containers: true, Images: true, Volumes: true, BuildCache: true, Verbose: true})
 		if err != nil {
 			return nil, fmt.Errorf("failed to get disk usage: %w", err)
 		}
 
 		var totalSize int64
-		if diskUsage.BuildCache != nil {
-			for _, cache := range diskUsage.BuildCache {
+		{
+			for _, cache := range diskUsage.BuildCache.Items {
 				totalSize += cache.Size
 				preview.ItemCount["build_cache"]++
 			}

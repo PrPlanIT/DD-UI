@@ -6,6 +6,9 @@ ci:
 matchers:
   branches:
     main: "^main$"
+    # Feature branches follow the type/name convention (e.g. chore/docker-sdk-v29);
+    # the slash cleanly excludes main. Drives per-branch Harbor dev builds.
+    feature: "^[^/]+/.+$"
 
 vars:
   org: prplanit
@@ -143,6 +146,17 @@ targets:
     tags: ["dev-{sha:8}", "latest-dev"]
     when: { branches: [main], events: [push] }
 
+  # ── Harbor: per-branch dev builds (feature branches → testable images) ──
+  # Pushing a feature branch publishes an internal image to pull onto a host and
+  # test before merge: cr.pcfae.com/prplanit/dd-ui:dev-<branch>-<sha8> (immutable)
+  # + :latest-dev-<branch> (rolling). Kept off public Docker Hub on purpose.
+  - id: harbor-branch-dev
+    kind: registry
+    registry: harbor
+    build: dd-ui
+    tags: ["dev-{branch}-{sha:8}", "latest-dev-{branch}"]
+    when: { branches: [feature], events: [push] }
+
   # ── Harbor: stable releases ─────────────────────────────────────
   - id: harbor-stable
     kind: registry
@@ -240,6 +254,12 @@ lint:
           github_releases: true
         vulnerability:
           enabled: true
+        severity:
+          # Major-version-behind is advisory, not a build-blocking critical: majors
+          # (node 26, compose 5, vite 8, typescript 6, …) need a deliberate tested
+          # upgrade, they shouldn't gate every build. CVE-affected deps STILL escalate
+          # to critical via severity_override (default on), so real security keeps gating.
+          major: 1
     tabs:
       enabled: true
     secrets:
@@ -262,6 +282,19 @@ lint:
     # pkg). dd-ui's runtime image HAS git (apk add … git, for GitSync) — false positive here.
     no-git-exec:
       enabled: false
+
+test:
+  enabled: true
+  suites:
+    # dd-ui's go.mod lives in api/, so the suite runs from there. No test files
+    # yet — this gates them the moment they're added (same as StageFreight itself).
+    - id: unit
+      tool: go
+      from: api
+      packages: [./...]
+      race: true
+      coverage: true
+      gate: perform
 
 release:
   enabled: true

@@ -18,8 +18,7 @@ import (
 	"dd-ui/database"
 	"dd-ui/utils"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
+	"github.com/moby/moby/client"
 )
 
 type IacRepoRow struct {
@@ -431,13 +430,13 @@ type ContainerBrief struct {
 
 type EnhancedIacStackOut struct {
 	IacStackOut
-	LatestDeployment  *database.DeploymentStamp  `json:"latest_deployment,omitempty"`
-	DriftDetected     bool              `json:"drift_detected"`
-	DriftReason       string            `json:"drift_reason,omitempty"`
-	Containers        []ContainerBrief  `json:"containers"`
-	RenderedServices  []common.RenderedService `json:"rendered_services,omitempty"`
-	RenderedConfigSha string            `json:"rendered_config_hash,omitempty"`
-	EffectiveAutoDevops bool            `json:"effective_auto_devops"`
+	LatestDeployment    *database.DeploymentStamp `json:"latest_deployment,omitempty"`
+	DriftDetected       bool                      `json:"drift_detected"`
+	DriftReason         string                    `json:"drift_reason,omitempty"`
+	Containers          []ContainerBrief          `json:"containers"`
+	RenderedServices    []common.RenderedService  `json:"rendered_services,omitempty"`
+	RenderedConfigSha   string                    `json:"rendered_config_hash,omitempty"`
+	EffectiveAutoDevops bool                      `json:"effective_auto_devops"`
 }
 
 func ListEnhancedIacStacksForHost(ctx context.Context, hostName string) ([]EnhancedIacStackOut, error) {
@@ -479,11 +478,12 @@ func ListEnhancedIacStacksForHost(ctx context.Context, hostName string) ([]Enhan
 		// Lookup runtime by Compose project label = sanitized(stack_name)
 		projectLabel := utils.ComposeProjectLabelFromStack(s.Name)
 
-		ff := filters.NewArgs()
+		ff := client.Filters{}
 		ff.Add("label", "com.docker.compose.project="+projectLabel)
 		common.DebugLog("Stack %s looking for containers with project label: %s", s.Name, projectLabel)
-		ctrs, lerr := cli.ContainerList(ctx, container.ListOptions{All: true, Filters: ff})
+		ctrsRes, lerr := cli.ContainerList(ctx, client.ContainerListOptions{All: true, Filters: ff})
 		if lerr == nil {
+			ctrs := ctrsRes.Items
 			common.DebugLog("Stack %s found %d containers", s.Name, len(ctrs))
 			for _, c := range ctrs {
 				lbl := func(k string) string {
@@ -501,7 +501,7 @@ func ListEnhancedIacStacksForHost(ctx context.Context, hostName string) ([]Enhan
 					Name:       name,
 					Service:    lbl("com.docker.compose.service"),
 					Image:      c.Image,
-					State:      c.State,
+					State:      string(c.State),
 					ConfigHash: lbl("com.docker.compose.config-hash"),
 				})
 			}
@@ -630,17 +630,17 @@ func getStacksBatch(ctx context.Context, stackIds []int64) ([]map[string]any, er
 
 	for _, id := range stackIds {
 		var stack struct {
-			ID         int64   `json:"id"`
-			RepoID     int64   `json:"repo_id"`
-			ScopeKind  string  `json:"scope_kind"`
-			ScopeName  string  `json:"scope_name"`
-			StackName  string  `json:"stack_name"`
-			RelPath    string  `json:"rel_path"`
-			IacEnabled bool    `json:"iac_enabled"`
-			DeployKind string  `json:"deploy_kind"`
-			SopsStatus string  `json:"sops_status"`
-			Override   *bool   `json:"auto_apply_override"`
-			UpdatedAt  string  `json:"updated_at"`
+			ID         int64  `json:"id"`
+			RepoID     int64  `json:"repo_id"`
+			ScopeKind  string `json:"scope_kind"`
+			ScopeName  string `json:"scope_name"`
+			StackName  string `json:"stack_name"`
+			RelPath    string `json:"rel_path"`
+			IacEnabled bool   `json:"iac_enabled"`
+			DeployKind string `json:"deploy_kind"`
+			SopsStatus string `json:"sops_status"`
+			Override   *bool  `json:"auto_apply_override"`
+			UpdatedAt  string `json:"updated_at"`
 		}
 
 		var updatedAt time.Time

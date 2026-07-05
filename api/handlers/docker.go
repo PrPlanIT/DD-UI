@@ -16,16 +16,11 @@ import (
 	"dd-ui/database"
 	"dd-ui/services"
 	"dd-ui/utils"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/api/types/volume"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/stdcopy"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/websocket"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/client"
 )
 
 // setupDockerRoutes sets up all Docker operations related routes
@@ -144,13 +139,14 @@ func handleContainerLogsStream(w http.ResponseWriter, r *http.Request) {
 	}
 	defer cli.Close()
 
-	inspect, err := cli.ContainerInspect(r.Context(), ctr)
+	inspectRes, err := cli.ContainerInspect(r.Context(), ctr, client.ContainerInspectOptions{})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	inspect := inspectRes.Container
 
-	opts := container.LogsOptions{
+	opts := client.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Follow:     true,
@@ -229,7 +225,7 @@ func handleContainerLogs(w http.ResponseWriter, r *http.Request) {
 	defer cli.Close()
 
 	tail := strings.TrimSpace(r.URL.Query().Get("tail"))
-	opts := container.LogsOptions{
+	opts := client.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Timestamps: false,
@@ -271,8 +267,9 @@ func handleContainerInspect(w http.ResponseWriter, r *http.Request) {
 			defer cli.Close()
 
 			// Get fresh inspection from Docker
-			info, err := cli.ContainerInspect(r.Context(), ctr)
+			infoRes, err := cli.ContainerInspect(r.Context(), ctr, client.ContainerInspectOptions{})
 			if err == nil {
+				info := infoRes.Container
 				// Enhance database data with fresh Docker inspection details
 				enhancedData := map[string]interface{}{
 					// All database fields
@@ -349,19 +346,19 @@ func handleContainerAction(w http.ResponseWriter, r *http.Request) {
 
 	switch body.Action {
 	case "start":
-		err = cli.ContainerStart(r.Context(), ctr, container.StartOptions{})
+		_, err = cli.ContainerStart(r.Context(), ctr, client.ContainerStartOptions{})
 	case "stop":
 		timeout := 10
-		err = cli.ContainerStop(r.Context(), ctr, container.StopOptions{Timeout: &timeout})
+		_, err = cli.ContainerStop(r.Context(), ctr, client.ContainerStopOptions{Timeout: &timeout})
 	case "restart":
 		timeout := 10
-		err = cli.ContainerRestart(r.Context(), ctr, container.StopOptions{Timeout: &timeout})
+		_, err = cli.ContainerRestart(r.Context(), ctr, client.ContainerRestartOptions{Timeout: &timeout})
 	case "pause":
-		err = cli.ContainerPause(r.Context(), ctr)
+		_, err = cli.ContainerPause(r.Context(), ctr, client.ContainerPauseOptions{})
 	case "unpause":
-		err = cli.ContainerUnpause(r.Context(), ctr)
+		_, err = cli.ContainerUnpause(r.Context(), ctr, client.ContainerUnpauseOptions{})
 	case "remove":
-		err = cli.ContainerRemove(r.Context(), ctr, container.RemoveOptions{Force: true})
+		_, err = cli.ContainerRemove(r.Context(), ctr, client.ContainerRemoveOptions{Force: true})
 	default:
 		http.Error(w, "unsupported action", http.StatusBadRequest)
 		return
@@ -390,7 +387,7 @@ func handleContainerStats(w http.ResponseWriter, r *http.Request) {
 	}
 	defer cli.Close()
 
-	stats, err := cli.ContainerStats(r.Context(), ctr, false)
+	stats, err := cli.ContainerStats(r.Context(), ctr, client.ContainerStatsOptions{})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -429,11 +426,12 @@ func handleContainerEnhancedAction(w http.ResponseWriter, r *http.Request) {
 	defer cli.Close()
 
 	// Get container details to find the stack
-	inspect, err := cli.ContainerInspect(r.Context(), containerID)
+	inspectRes, err := cli.ContainerInspect(r.Context(), containerID, client.ContainerInspectOptions{})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	inspect := inspectRes.Container
 
 	// Look for deployment stamp in labels
 	var stampID int64
@@ -444,13 +442,13 @@ func handleContainerEnhancedAction(w http.ResponseWriter, r *http.Request) {
 	// Execute the action with deployment awareness
 	switch body.Action {
 	case "start":
-		err = cli.ContainerStart(r.Context(), containerID, container.StartOptions{})
+		_, err = cli.ContainerStart(r.Context(), containerID, client.ContainerStartOptions{})
 	case "stop":
 		timeout := 10
-		err = cli.ContainerStop(r.Context(), containerID, container.StopOptions{Timeout: &timeout})
+		_, err = cli.ContainerStop(r.Context(), containerID, client.ContainerStopOptions{Timeout: &timeout})
 	case "restart":
 		timeout := 10
-		err = cli.ContainerRestart(r.Context(), containerID, container.StopOptions{Timeout: &timeout})
+		_, err = cli.ContainerRestart(r.Context(), containerID, client.ContainerRestartOptions{Timeout: &timeout})
 	default:
 		http.Error(w, "unsupported enhanced action", http.StatusBadRequest)
 		return
@@ -462,11 +460,11 @@ func handleContainerEnhancedAction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
-		"success":       true,
-		"container_id":  containerID,
-		"action":        body.Action,
-		"stamp_id":      stampID,
-		"enhanced":      true,
+		"success":      true,
+		"container_id": containerID,
+		"action":       body.Action,
+		"stamp_id":     stampID,
+		"enhanced":     true,
 	})
 }
 
@@ -529,7 +527,7 @@ func handleImagesList(w http.ResponseWriter, r *http.Request) {
 	}
 	defer cli.Close()
 
-	list, err := cli.ImageList(r.Context(), image.ListOptions{All: true})
+	list, err := cli.ImageList(r.Context(), client.ImageListOptions{All: true})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -538,9 +536,9 @@ func handleImagesList(w http.ResponseWriter, r *http.Request) {
 	stored, _ := services.GetImageTagMap(r.Context(), hostname)
 
 	// Get containers to determine image usage
-	containers, _ := cli.ContainerList(r.Context(), container.ListOptions{All: true})
+	containers, _ := cli.ContainerList(r.Context(), client.ContainerListOptions{All: true})
 	usedImages := make(map[string]bool)
-	for _, c := range containers {
+	for _, c := range containers.Items {
 		usedImages[c.ImageID] = true
 		// Only track by actual image SHA, not by tag name
 	}
@@ -555,9 +553,9 @@ func handleImagesList(w http.ResponseWriter, r *http.Request) {
 		Usage    string `json:"usage"`
 	}
 	var items []row
-	seen := make(map[string]struct{}, len(list))
+	seen := make(map[string]struct{}, len(list.Items))
 
-	for _, im := range list {
+	for _, im := range list.Items {
 		id := im.ID
 		seen[id] = struct{}{}
 		repo := "<none>"
@@ -595,9 +593,9 @@ func handleImagesList(w http.ResponseWriter, r *http.Request) {
 			Tag:      tag,
 			Orphaned: orphaned,
 			Usage:    usage,
-			ID:      id,
-			Size:    services.HumanSize(im.Size),
-			Created: time.Unix(im.Created, 0).Format(time.RFC3339),
+			ID:       id,
+			Size:     services.HumanSize(im.Size),
+			Created:  time.Unix(im.Created, 0).Format(time.RFC3339),
 		})
 	}
 
@@ -636,7 +634,7 @@ func handleImagesDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	out := make([]res, 0, len(body.IDs))
 	for _, id := range body.IDs {
-		_, err := cli.ImageRemove(r.Context(), id, image.RemoveOptions{
+		_, err := cli.ImageRemove(r.Context(), id, client.ImageRemoveOptions{
 			Force:         body.Force,
 			PruneChildren: true,
 		})
@@ -670,7 +668,7 @@ func handleNetworksList(w http.ResponseWriter, r *http.Request) {
 	}
 	defer cli.Close()
 
-	nets, err := cli.NetworkList(r.Context(), network.ListOptions{Filters: filters.NewArgs()})
+	nets, err := cli.NetworkList(r.Context(), client.NetworkListOptions{Filters: client.Filters{}})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -682,7 +680,7 @@ func handleNetworksList(w http.ResponseWriter, r *http.Request) {
 		Scope  string `json:"scope"`
 	}
 	var items []row
-	for _, n := range nets {
+	for _, n := range nets.Items {
 		items = append(items, row{ID: n.ID, Name: n.Name, Driver: n.Driver, Scope: n.Scope})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"networks": items})
@@ -720,7 +718,7 @@ func handleNetworksDelete(w http.ResponseWriter, r *http.Request) {
 	out := make([]res, 0, len(body.Names))
 
 	for _, n := range body.Names {
-		err := cli.NetworkRemove(r.Context(), n)
+		_, err := cli.NetworkRemove(r.Context(), n, client.NetworkRemoveOptions{})
 		if err != nil {
 			out = append(out, res{Name: n, Ok: false, Err: err.Error()})
 			continue
@@ -747,7 +745,7 @@ func handleVolumesList(w http.ResponseWriter, r *http.Request) {
 	}
 	defer cli.Close()
 
-	vl, err := cli.VolumeList(r.Context(), volume.ListOptions{Filters: filters.NewArgs()})
+	vl, err := cli.VolumeList(r.Context(), client.VolumeListOptions{Filters: client.Filters{}})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -759,7 +757,7 @@ func handleVolumesList(w http.ResponseWriter, r *http.Request) {
 		Created    string `json:"created"`
 	}
 	var items []row
-	for _, v := range vl.Volumes {
+	for _, v := range vl.Items {
 		created := v.CreatedAt
 		items = append(items, row{v.Name, v.Driver, v.Mountpoint, created})
 	}
@@ -799,7 +797,7 @@ func handleVolumesDelete(w http.ResponseWriter, r *http.Request) {
 	out := make([]res, 0, len(body.Names))
 
 	for _, n := range body.Names {
-		err := cli.VolumeRemove(r.Context(), n, body.Force)
+		_, err := cli.VolumeRemove(r.Context(), n, client.VolumeRemoveOptions{Force: body.Force})
 		if err != nil {
 			out = append(out, res{Name: n, Ok: false, Err: err.Error()})
 			continue
@@ -842,7 +840,7 @@ func handleLocalConsole(conn *websocket.Conn, cli *client.Client, host, ctr stri
 
 	type runner struct {
 		id  string
-		att types.HijackedResponse
+		att client.ExecAttachResult
 	}
 	var chosen *runner
 
@@ -851,11 +849,11 @@ func handleLocalConsole(conn *websocket.Conn, cli *client.Client, host, ctr stri
 
 	for _, cmd := range candidates {
 		common.DebugLog("Console: Trying shell command %v on host=%s container=%s", cmd, host, ctr)
-		created, cerr := cli.ContainerExecCreate(tryCtx, ctr, container.ExecOptions{
+		created, cerr := cli.ExecCreate(tryCtx, ctr, client.ExecCreateOptions{
 			AttachStdin:  true,
 			AttachStdout: true,
 			AttachStderr: true,
-			Tty:          true,
+			TTY:          true,
 			Cmd:          cmd,
 			Env:          []string{},
 			WorkingDir:   "",
@@ -865,7 +863,7 @@ func handleLocalConsole(conn *websocket.Conn, cli *client.Client, host, ctr stri
 			continue
 		}
 
-		att, aerr := cli.ContainerExecAttach(tryCtx, created.ID, container.ExecStartOptions{Tty: true})
+		att, aerr := cli.ExecAttach(tryCtx, created.ID, client.ExecAttachOptions{TTY: true})
 		if aerr != nil {
 			common.ErrorLog("Console: Shell attach failed for %v on host=%s container=%s: %v", cmd, host, ctr, aerr)
 			continue
@@ -873,7 +871,7 @@ func handleLocalConsole(conn *websocket.Conn, cli *client.Client, host, ctr stri
 
 		// Inspect quickly: if it already exited, treat as not available.
 		time.Sleep(150 * time.Millisecond) // tiny grace for startup
-		ins, ierr := cli.ContainerExecInspect(tryCtx, created.ID)
+		ins, ierr := cli.ExecInspect(tryCtx, created.ID, client.ExecInspectOptions{})
 		if ierr != nil {
 			common.ErrorLog("Console: Shell inspect failed for %v on host=%s container=%s: %v", cmd, host, ctr, ierr)
 			att.Close()
@@ -923,7 +921,7 @@ func handleLocalConsole(conn *websocket.Conn, cli *client.Client, host, ctr stri
 					Rows int    `json:"rows"`
 				}
 				if err := json.Unmarshal(data, &msg); err == nil && strings.EqualFold(msg.Type, "resize") {
-					_ = cli.ContainerExecResize(context.Background(), execID, container.ResizeOptions{
+					_, _ = cli.ExecResize(context.Background(), execID, client.ExecResizeOptions{
 						Width:  uint(msg.Cols),
 						Height: uint(msg.Rows),
 					})

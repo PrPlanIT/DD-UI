@@ -15,9 +15,8 @@ import (
 	"dd-ui/common"
 	"dd-ui/database"
 	"dd-ui/utils"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/client"
+
+	"github.com/moby/moby/client"
 )
 
 // funcStackStager adapts a function to the StackStager interface
@@ -145,8 +144,8 @@ func DeployStack(ctx context.Context, stackID int64) error {
 	// Create a minimal environment to prevent host environment leakage
 	// Docker Compose should only use env vars from .env files in the staged directory
 	dockerEnv := []string{
-		"PATH=" + os.Getenv("PATH"),  // Need PATH to find docker/sops commands
-		"HOME=" + os.Getenv("HOME"),  // Docker may need HOME for config
+		"PATH=" + os.Getenv("PATH"), // Need PATH to find docker/sops commands
+		"HOME=" + os.Getenv("HOME"), // Docker may need HOME for config
 	}
 
 	// Add SOPS variables if they exist (needed for decryption of env files)
@@ -210,7 +209,7 @@ func DeployStack(ctx context.Context, stackID int64) error {
 			}
 		}
 		go func(label string, stampID int64, depHash string) {
-          // depHash is the stamp.DeploymentHash (content hash)
+			// depHash is the stamp.DeploymentHash (content hash)
 			backoff := []time.Duration{1 * time.Second, 2 * time.Second, 3 * time.Second, 5 * time.Second}
 			for i := 0; i < len(backoff); i++ {
 				if i > 0 {
@@ -238,7 +237,7 @@ func DeployStackWithStream(ctx context.Context, stackID int64, eventChannel chan
 
 	sendEvent := func(eventType, message string, data map[string]interface{}) {
 		event := map[string]interface{}{
-			"type": eventType,
+			"type":    eventType,
 			"message": message,
 		}
 		if data != nil {
@@ -336,8 +335,8 @@ func DeployStackWithStream(ctx context.Context, stackID int64, eventChannel chan
 				fmt.Sprintf("Configuration unchanged since %s. Deploy anyway?",
 					existingStamp.DeploymentTimestamp.Format("2006-01-02 15:04:05")),
 				map[string]interface{}{
-					"existing_stamp_id": existingStamp.ID,
-					"last_deploy_time": existingStamp.DeploymentTimestamp,
+					"existing_stamp_id":  existingStamp.ID,
+					"last_deploy_time":   existingStamp.DeploymentTimestamp,
 					"last_deploy_status": existingStamp.DeploymentStatus,
 				})
 			// Wait for user confirmation before continuing
@@ -377,8 +376,8 @@ func DeployStackWithStream(ctx context.Context, stackID int64, eventChannel chan
 	// Create a minimal environment to prevent host environment leakage
 	// Docker Compose should only use env vars from .env files in the staged directory
 	dockerEnv := []string{
-		"PATH=" + os.Getenv("PATH"),  // Need PATH to find docker/sops commands
-		"HOME=" + os.Getenv("HOME"),  // Docker may need HOME for config
+		"PATH=" + os.Getenv("PATH"), // Need PATH to find docker/sops commands
+		"HOME=" + os.Getenv("HOME"), // Docker may need HOME for config
 	}
 
 	// Add SOPS variables if they exist (needed for decryption of env files)
@@ -541,13 +540,14 @@ func associateByProjectInspect(ctx context.Context, projectLabel string, stampID
 		}
 	}()
 
-	flt := filters.NewArgs()
+	flt := client.Filters{}
 	flt.Add("label", "com.docker.compose.project="+projectLabel)
 
-	list, err := cli.ContainerList(ctx, container.ListOptions{All: true, Filters: flt})
+	listRes, err := cli.ContainerList(ctx, client.ContainerListOptions{All: true, Filters: flt})
 	if err != nil {
 		return err
 	}
+	list := listRes.Items
 	if len(list) == 0 {
 		return fmt.Errorf("no containers yet for compose project=%s", projectLabel)
 	}
