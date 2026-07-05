@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -287,12 +288,23 @@ func ScanHostContainers(ctx context.Context, hostName string) (int, error) {
 				portsOut = flattenPorts(ci.NetworkSettings.Ports)
 			}
 			// v29: NetworkSettings has no top-level IPAddress; the container IP
-			// now lives on each network endpoint (default bridge = Networks["bridge"]).
+			// now lives on each network endpoint. Prefer the default bridge (matches
+			// v28's top-level IPAddress); otherwise pick deterministically by network
+			// name, since map iteration order is random.
 			if ci.NetworkSettings.Networks != nil {
-				for _, ep := range ci.NetworkSettings.Networks {
-					if ep != nil && ep.IPAddress.IsValid() {
-						ip = ep.IPAddress.String()
-						break
+				if ep := ci.NetworkSettings.Networks["bridge"]; ep != nil && ep.IPAddress.IsValid() {
+					ip = ep.IPAddress.String()
+				} else {
+					names := make([]string, 0, len(ci.NetworkSettings.Networks))
+					for name := range ci.NetworkSettings.Networks {
+						names = append(names, name)
+					}
+					sort.Strings(names)
+					for _, name := range names {
+						if ep := ci.NetworkSettings.Networks[name]; ep != nil && ep.IPAddress.IsValid() {
+							ip = ep.IPAddress.String()
+							break
+						}
 					}
 				}
 			}
