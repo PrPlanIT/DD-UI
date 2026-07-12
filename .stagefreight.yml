@@ -215,22 +215,6 @@ dependency:
     push: true
     skip_ci: false
 
-docs:
-  enabled: true
-  generators:
-    badges: true
-    narrator: true
-    docker_readme: true
-  commit:
-    enabled: true
-    type: docs
-    message: "refresh generated docs and badges"
-    add:
-      - "README.md"
-      - ".stagefreight/badges"
-    push: true
-    skip_ci: true
-
 lint:
   level: full
   exclude:
@@ -320,8 +304,8 @@ toolchains:
     cosign:
       version: "3.0.6"
 
-badges:
-  items:
+narrate:
+  badges:
     - id: build
       text: build
       value: "{env:BUILD_STATUS}"
@@ -380,109 +364,116 @@ badges:
       color: "#555"
       output: ".stagefreight/badges/dev-size.svg"
       link: "https://hub.docker.com/r/{var:org}/{var:repo}/tags?name=latest-dev"
+  patches:
+    - file: "README.md"
+      items:
+        - id: badge.build
+          kind: badge_ref
+          ref: build
+          placement:
+            between: ["<!-- sf:badges:start -->", "<!-- sf:badges:end -->"]
+            mode: replace
+            inline: true
+        - id: badge.license
+          kind: badge_ref
+          ref: license
+          placement:
+            between: ["<!-- sf:badges:start -->", "<!-- sf:badges:end -->"]
+            mode: replace
+            inline: true
+        - id: badge.release
+          kind: badge_ref
+          ref: release
+          placement:
+            between: ["<!-- sf:badges:start -->", "<!-- sf:badges:end -->"]
+            mode: replace
+            inline: true
+        - id: badge.updated
+          kind: badge_ref
+          ref: updated
+          placement:
+            between: ["<!-- sf:badges:start -->", "<!-- sf:badges:end -->"]
+            mode: replace
+            inline: true
+        - id: shield.donate
+          kind: shield
+          placement:
+            between: ["<!-- sf:badges:start -->", "<!-- sf:badges:end -->"]
+            mode: replace
+            inline: true
+          shield: "badge/donate-FF5E5B?logo=ko-fi&logoColor=white"
+          link: "https://ko-fi.com/T6T41IT163"
+        - id: shield.sponsor
+          kind: shield
+          placement:
+            between: ["<!-- sf:badges:start -->", "<!-- sf:badges:end -->"]
+            mode: replace
+            inline: true
+          shield: "badge/sponsor-EA4AAA?logo=githubsponsors&logoColor=white"
+          link: "https://github.com/sponsors/{var:github_org}"
 
-narrator:
-  - file: "README.md"
-    items:
-      - id: badge.build
-        kind: badge_ref
-        ref: build
-        placement:
-          between: ["<!-- sf:badges:start -->", "<!-- sf:badges:end -->"]
-          mode: replace
-          inline: true
-      - id: badge.license
-        kind: badge_ref
-        ref: license
-        placement:
-          between: ["<!-- sf:badges:start -->", "<!-- sf:badges:end -->"]
-          mode: replace
-          inline: true
-      - id: badge.release
-        kind: badge_ref
-        ref: release
-        placement:
-          between: ["<!-- sf:badges:start -->", "<!-- sf:badges:end -->"]
-          mode: replace
-          inline: true
-      - id: badge.updated
-        kind: badge_ref
-        ref: updated
-        placement:
-          between: ["<!-- sf:badges:start -->", "<!-- sf:badges:end -->"]
-          mode: replace
-          inline: true
-      - id: shield.donate
-        kind: shield
-        placement:
-          between: ["<!-- sf:badges:start -->", "<!-- sf:badges:end -->"]
-          mode: replace
-          inline: true
-        shield: "badge/donate-FF5E5B?logo=ko-fi&logoColor=white"
-        link: "https://ko-fi.com/T6T41IT163"
-      - id: shield.sponsor
-        kind: shield
-        placement:
-          between: ["<!-- sf:badges:start -->", "<!-- sf:badges:end -->"]
-          mode: replace
-          inline: true
-        shield: "badge/sponsor-EA4AAA?logo=githubsponsors&logoColor=white"
-        link: "https://github.com/sponsors/{var:github_org}"
+        - id: project.github
+          kind: shield
+          placement:
+            between: ["<!-- sf:project:start -->", "<!-- sf:project:end -->"]
+            mode: replace
+            inline: true
+          shield: "badge/GitHub-source-181717?logo=github"
+          link: "https://github.com/{var:github_org}/{var:github_repo}"
+        - id: project.gitlab
+          kind: shield
+          placement:
+            between: ["<!-- sf:project:start -->", "<!-- sf:project:end -->"]
+            mode: replace
+            inline: true
+          shield: "badge/GitLab-source-FC6D26?logo=gitlab"
+          link: "https://gitlab.prplanit.com/{var:gitlab_group}/{var:repo}"
+        - id: project.last-commit
+          kind: props
+          type: github-last-commit
+          placement:
+            between: ["<!-- sf:project:start -->", "<!-- sf:project:end -->"]
+            mode: replace
+            inline: true
+          params:
+            repo: "{var:github_org}/{var:github_repo}"
+        - id: project.issues-open
+          kind: props
+          type: github-issues-open
+          placement:
+            between: ["<!-- sf:project:start -->", "<!-- sf:project:end -->"]
+            mode: replace
+            inline: true
+          params:
+            repo: "{var:github_org}/{var:github_repo}"
+        - id: project.contributors
+          kind: props
+          type: github-contributors
+          placement:
+            between: ["<!-- sf:project:start -->", "<!-- sf:project:end -->"]
+            mode: replace
+            inline: true
+          params:
+            repo: "{var:github_org}/{var:github_repo}"
 
-      - id: project.github
-        kind: shield
-        placement:
-          between: ["<!-- sf:project:start -->", "<!-- sf:project:end -->"]
-          mode: replace
-          inline: true
-        shield: "badge/GitHub-source-181717?logo=github"
-        link: "https://github.com/{var:github_org}/{var:github_repo}"
-      - id: project.gitlab
-        kind: shield
-        placement:
-          between: ["<!-- sf:project:start -->", "<!-- sf:project:end -->"]
-          mode: replace
-          inline: true
-        shield: "badge/GitLab-source-FC6D26?logo=gitlab"
-        link: "https://gitlab.prplanit.com/{var:gitlab_group}/{var:repo}"
-      - id: project.last-commit
-        kind: props
-        type: github-last-commit
-        placement:
-          between: ["<!-- sf:project:start -->", "<!-- sf:project:end -->"]
-          mode: replace
-          inline: true
-        params:
-          repo: "{var:github_org}/{var:github_repo}"
-      - id: project.issues-open
-        kind: props
-        type: github-issues-open
-        placement:
-          between: ["<!-- sf:project:start -->", "<!-- sf:project:end -->"]
-          mode: replace
-          inline: true
-        params:
-          repo: "{var:github_org}/{var:github_repo}"
-      - id: project.contributors
-        kind: props
-        type: github-contributors
-        placement:
-          between: ["<!-- sf:project:start -->", "<!-- sf:project:end -->"]
-          mode: replace
-          inline: true
-        params:
-          repo: "{var:github_org}/{var:github_repo}"
-
-      - id: image.docker
-        kind: shield
-        placement:
-          between: ["<!-- sf:image:start -->", "<!-- sf:image:end -->"]
-          mode: replace
-        shield: "badge/Docker-{var:org}%2Fdd--ui-2496ED?logo=docker&logoColor=white"
-        link: "https://hub.docker.com/r/{var:org}/{var:repo}"
-      - id: image.pulls
-        kind: badge_ref
-        ref: pulls
-        placement:
-          between: ["<!-- sf:image:start -->", "<!-- sf:image:end -->"]
-          mode: replace
+        - id: image.docker
+          kind: shield
+          placement:
+            between: ["<!-- sf:image:start -->", "<!-- sf:image:end -->"]
+            mode: replace
+          shield: "badge/Docker-{var:org}%2Fdd--ui-2496ED?logo=docker&logoColor=white"
+          link: "https://hub.docker.com/r/{var:org}/{var:repo}"
+        - id: image.pulls
+          kind: badge_ref
+          ref: pulls
+          placement:
+            between: ["<!-- sf:image:start -->", "<!-- sf:image:end -->"]
+            mode: replace
+  commit:
+    type: docs
+    message: "refresh generated docs and badges"
+    add:
+      - "README.md"
+      - ".stagefreight/badges"
+    push: true
+    skip_ci: true
