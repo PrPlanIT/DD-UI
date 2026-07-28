@@ -17,7 +17,7 @@ COPY ui/ .
 RUN npm run build
 
 # --- Go build ---
-FROM golang:1.25.11-alpine AS api
+FROM golang:1.25.12-alpine AS api
 WORKDIR /api
 COPY api/go.mod ./
 RUN go mod download
@@ -65,7 +65,7 @@ RUN set -eux; \
       docker --version
 
 # --- Compose v2 plugin ---
-ARG COMPOSE_VERSION=5.3.0
+ARG COMPOSE_VERSION=5.3.1
 RUN set -eux; \
       # Alpine uses different arch detection
       arch="$(uname -m)"; \
