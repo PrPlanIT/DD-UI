@@ -4,13 +4,10 @@ import React, { useEffect, useState } from "react";
 import { handle401 } from "@/utils/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { handle401 } from "@/utils/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { handle401 } from "@/utils/auth";
 import { Switch } from "@/components/ui/switch";
 import EnhancedHostPicker, { PickerOption } from "@/components/EnhancedHostPicker";
-import { handle401 } from "@/utils/auth";
 import GitSyncToggle from "@/components/GitSyncToggle";
 import DevOpsToggle from "@/components/DevOpsToggle";
 import {
@@ -39,23 +36,17 @@ import {
   Users,
 } from "lucide-react";
 import StatePill from "@/components/StatePill";
-import { handle401 } from "@/utils/auth";
 import DriftBadge from "@/components/DriftBadge";
 import ActionBtn from "@/components/ActionBtn";
-import { handle401 } from "@/utils/auth";
 import LiveLogsModal from "@/components/LiveLogsModal";
 import ConsoleModal from "@/components/ConsoleModal";
-import { handle401 } from "@/utils/auth";
 import SearchBar from "@/components/SearchBar";
 import PortLinks from "@/components/PortLinks";
-import { handle401 } from "@/utils/auth";
 import NewStackDialog from "@/components/NewStackDialog";
 import { ApiContainer, Host, IacService, IacStack, MergedRow, MergedStack } from "@/types";
 import { formatDT, formatPortsLines } from "@/utils/format";
-import { handle401 } from "@/utils/auth";
 import { debugLog, warnLog } from "@/utils/logging";
 import { computeHostMetrics } from "@/utils/metrics";
-import { handle401 } from "@/utils/auth";
 
 // Debounce helper to prevent excessive API calls
 function useDebounce<T extends (...args: any[]) => any>(func: T, delay: number): T {

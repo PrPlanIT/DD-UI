@@ -1,12 +1,10 @@
 // ui/src/views/VolumesView.tsx
 import { useEffect, useMemo, useState } from "react";
 import { handle401 } from "@/utils/auth";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router";
 import HostPicker from "@/components/HostPicker";
-import { handle401 } from "@/utils/auth";
 import SortableHeader from "@/components/SortableHeader";
 import SearchBar from "@/components/SearchBar";
-import { handle401 } from "@/utils/auth";
 import { Host } from "@/types";
 
 type VolRow = { name: string; driver: string; mountpoint: string; created: string };

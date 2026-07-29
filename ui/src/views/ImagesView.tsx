@@ -1,6 +1,6 @@
 // ui/src/views/ImagesView.tsx
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router";
 import HostPicker from "@/components/HostPicker";
 import SortableHeader from "@/components/SortableHeader";
 import SearchBar from "@/components/SearchBar";

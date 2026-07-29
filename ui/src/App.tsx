@@ -1,6 +1,6 @@
 // ui/src/App.tsx
 import React, { useEffect, useMemo, useState } from "react";
-import { Routes, Route, useNavigate, useLocation, useParams } from "react-router-dom";
+import { Routes, Route, useNavigate, useLocation, useParams } from "react-router";
 import LeftNav from "@/components/LeftNav";
 import LoginGate from "@/components/LoginGate";
 import HostsView from "@/views/HostsView";

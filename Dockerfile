@@ -1,5 +1,5 @@
 # --- UI build ---
-FROM node:20.20.2-alpine AS ui
+FROM node:22.23.1-alpine AS ui
 WORKDIR /ui
 
 # copy lockfile if it exists
