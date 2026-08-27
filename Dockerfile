@@ -1,5 +1,5 @@
 # --- UI build ---
-FROM node:22.23.1-alpine AS ui
+FROM node:22.23.2-alpine AS ui
 WORKDIR /ui
 
 # copy lockfile if it exists
@@ -17,7 +17,7 @@ COPY ui/ .
 RUN npm run build
 
 # --- Go build ---
-FROM golang:1.25.12-alpine AS api
+FROM golang:1.25.14-alpine AS api
 WORKDIR /api
 COPY api/go.mod ./
 RUN go mod download
@@ -65,7 +65,7 @@ RUN set -eux; \
       docker --version
 
 # --- Compose v2 plugin ---
-ARG COMPOSE_VERSION=5.3.1
+ARG COMPOSE_VERSION=5.5.0
 RUN set -eux; \
       # Alpine uses different arch detection
       arch="$(uname -m)"; \
