@@ -1,0 +1,4 @@
+release:
+  enabled: true
+  security_summary: true
+  registry_links: true

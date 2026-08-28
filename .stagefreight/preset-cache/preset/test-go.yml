@@ -1,0 +1,12 @@
+# Go test suite: `go test` via the StageFreight go toolchain. Packages default to the
+# whole module, so a repo needs nothing beyond having tests. Race detection is left off
+# deliberately — it roughly doubles a build's memory demand, and the runners this fleet
+# uses are memory-bound; a repo that wants it can override per-suite.
+test:
+  enabled: true
+  suites:
+    unit:
+      tool: go
+      packages: [./...]
+      coverage: true
+      gate: perform

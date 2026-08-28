@@ -1,0 +1,22 @@
+build_cache:
+  mode: hybrid
+  external:
+    registry: harbor
+    path: "cache"
+    fallback: "main"
+  local:
+    retention:
+      max_age: "7d"
+      max_size: "8GB"
+  # Host-cleanup AUTHORIZATION for the fleet's runners: the disk-GC may evict the
+  # third-party streams DECLARED below (scoped adoption — nothing undeclared is ever
+  # image-pruned) plus dangling/exited residue past 72h.
+  cleanup:
+    enabled: true
+    prune:
+      images:
+        refs:
+          # CI base image for electron builds — heavy (≈6G) and re-pullable; keep
+          # copies used within 30d, evict older.
+          - { match: "electronuserland/builder:{tag}", max_age: "30d" }
+        dangling: { older_than: "72h" }

@@ -1,0 +1,7 @@
+# builds — one docker image under the generic id 'image' (referenced by publish
+# build: image and the contents-* stencils). No per-repo name in the shared preset.
+builds:
+  image:
+    kind: docker
+    platforms:
+    - linux/amd64
