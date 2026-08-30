@@ -1,4 +1,4 @@
 commit:
-  default_type: docs
+  default_type: chore
   conventional: true
   backend: git
