@@ -1,6 +1,7 @@
 // ui/src/views/StackDetailView.tsx
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { handle401 } from "@/utils/auth";
+import ChunkFallback from "@/components/ChunkFallback";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,8 @@ import { Switch } from "@/components/ui/switch";
 import DevOpsToggle from "@/components/DevOpsToggle";
 import { ArrowLeft, ChevronRight, Eye, EyeOff, RefreshCw, Trash2, Rocket, Square } from "lucide-react";
 import Fact from "@/components/Fact";
-import MiniEditor from "@/editors/MiniEditor";
+// pulls in monaco, the heaviest dependency; only mounted when a file is opened
+const MiniEditor = lazy(() => import("@/editors/MiniEditor"));
 import StatePill from "@/components/StatePill";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { ApiContainer, Host, IacFileMeta, InspectOut } from "@/types";
@@ -991,16 +993,18 @@ export default function StackDetailView({
 
               {editPath && (
                 <div className="flex-1 min-h-0">
-                  <MiniEditor
-                    key={editPath}
-                    id="stack-editor"
-                    initialPath={editPath}
-                    hostName={host.name}
-                    stackName={stackName}
-                    ensureStack={ensureStack}
-                    refresh={() => { setEditPath(null); refreshFiles(); }}
-                    fileMeta={files.find(f => f.rel_path === editPath)}
-                  />
+                  <Suspense fallback={<ChunkFallback label="Loading editor…" />}>
+                    <MiniEditor
+                      key={editPath}
+                      id="stack-editor"
+                      initialPath={editPath}
+                      hostName={host.name}
+                      stackName={stackName}
+                      ensureStack={ensureStack}
+                      refresh={() => { setEditPath(null); refreshFiles(); }}
+                      fileMeta={files.find(f => f.rel_path === editPath)}
+                    />
+                  </Suspense>
                 </div>
               )}
             </CardContent>

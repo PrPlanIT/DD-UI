@@ -1,7 +1,8 @@
 // ui/src/views/HostsStacksView.tsx
 // ui/src/views/HostsStacksView.tsx
-import React, { useEffect, useState } from "react";
+import React, { lazy, Suspense, useEffect, useState } from "react";
 import { handle401 } from "@/utils/auth";
+import ChunkFallback from "@/components/ChunkFallback";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,8 @@ import StatePill from "@/components/StatePill";
 import DriftBadge from "@/components/DriftBadge";
 import ActionBtn from "@/components/ActionBtn";
 import LiveLogsModal from "@/components/LiveLogsModal";
-import ConsoleModal from "@/components/ConsoleModal";
+// pulls in xterm; only mounted when a console is actually opened
+const ConsoleModal = lazy(() => import("@/components/ConsoleModal"));
 import SearchBar from "@/components/SearchBar";
 import PortLinks from "@/components/PortLinks";
 import NewStackDialog from "@/components/NewStackDialog";
@@ -1164,7 +1166,9 @@ export default function HostStacksView({
 
       {/* Console Modal */}
       {consoleTarget && (
-        <ConsoleModal host={consoleTarget.host || host.name} container={consoleTarget.ctr} onClose={() => setConsoleTarget(null)} />
+        <Suspense fallback={<ChunkFallback label="Loading console…" />}>
+          <ConsoleModal host={consoleTarget.host || host.name} container={consoleTarget.ctr} onClose={() => setConsoleTarget(null)} />
+        </Suspense>
       )}
 
       {/* Info Modal */}

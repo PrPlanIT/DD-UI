@@ -1,5 +1,5 @@
 // ui/src/App.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { Routes, Route, useNavigate, useLocation, useParams } from "react-router";
 import LeftNav from "@/components/LeftNav";
 import LoginGate from "@/components/LoginGate";
@@ -12,7 +12,9 @@ import VolumesView from "@/views/VolumesView";
 import DashboardView from "@/views/DashboardView";
 import GroupsView from "@/views/GroupsView";
 import CleanupView from "@/views/CleanupView";
-import LoggingView from "@/views/LoggingView";
+import ChunkFallback from "@/components/ChunkFallback";
+// xterm ships ~500KB and only this route needs it; keep it out of the entry bundle
+const LoggingView = lazy(() => import("@/views/LoggingView"));
 import GitSyncView from "@/views/GitSyncView";
 import { SessionResp, Host, ApiContainer, IacStack } from "@/types";
 import { computeHostMetrics } from "@/utils/metrics";
@@ -387,7 +389,7 @@ export default function App() {
             <Route path="/hosts/:hostName/cleanup" element={<CleanupView hosts={hosts} loading={loading} />} />
 
             {/* Logging route */}
-            <Route path="/logging" element={<LoggingView />} />
+            <Route path="/logging" element={<Suspense fallback={<ChunkFallback />}><LoggingView /></Suspense>} />
 
             {/* Git Sync route */}
             <Route path="/git" element={<GitSyncView />} />
