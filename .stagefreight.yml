@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------------------
 # GENERATED / ENFORCED BY STAGEFREIGHT GOVERNANCE
 # Source repo: PrPlanIT/MaintenancePolicy
-# Source ref: f03f7405316448d8f77585f2def7f4906a8ae56b
+# Source ref: 7da191914c2f4f4edb86a3df3a95fbef30f7f062
 # Profile: prplanit-docker
 # This .stagefreight.yml is governed, not purely local.
 # To disable governance, detach from the control repo workflow.
@@ -66,7 +66,7 @@ preset_source:
   cache_policy: authoritative
   project_id: PrPlanIT/MaintenancePolicy
   provider: gitlab
-  ref: f03f7405316448d8f77585f2def7f4906a8ae56b
+  ref: 7da191914c2f4f4edb86a3df3a95fbef30f7f062
   repo_url: https://gitlab.prplanit.com
 publish:
   harbor-branch-dev:
