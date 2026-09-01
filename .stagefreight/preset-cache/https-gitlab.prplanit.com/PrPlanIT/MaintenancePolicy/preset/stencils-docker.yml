@@ -1,0 +1,25 @@
+# Docker/image add-on stencils — compose after stencils-core.yml for a container repo.
+# Fact-based, and deliberately routed through {path.<registry>} rather than composing
+# "{org.docker}/{slug}" by hand: the registry path is the ONE place a surface's coordinates
+# resolve (org alias + repo name, lowercased because OCI names are lowercase by spec).
+# Hand-composing re-derives that identity and gets it wrong twice — for any repo whose name
+# carries case (`HomeLabHD/SteamCMD` → the unusable ref `hlhd/SteamCMD`), and for GHCR,
+# whose org alias is not Docker Hub's. {slug.lower} names the package itself.
+stencils:
+  ghcr:            { render: shield, label: GHCR,   message: "{path.ghcr}", color: "#181717", logo: github, logo_color: white, link: "https://github.com/{path.github}/pkgs/container/{slug.lower}" }
+  docker:          { render: shield, label: Docker, message: "{path.dockerhub}", color: "#2496ED", logo: docker, logo_color: white, link: "https://hub.docker.com/r/{path.dockerhub}" }
+  pulls:           { label: pulls, message: "{registry.dockerhub.pulls}", color: "#1d63ed", link: "https://hub.docker.com/r/{path.dockerhub}" }
+  harbor:          { render: shield, label: Harbor, message: "{path.harbor}", color: "#60b932", link: "https://cr.pcfae.com/harbor/projects" }
+  release-latest:  { label: latest, message: "v{base}", color: "#74ecbe", font: dejavu-sans, font_size: 11, link: "https://github.com/{path.github}/pkgs/container/{slug.lower}" }
+  release-updated: { label: updated, message: "{registry.ghcr.tag.v{base}.updated}", color: "#236144", font: dejavu-sans, font_size: 11 }
+  release-size:    { label: size, message: "{registry.ghcr.tag.v{base}.size}", color: "#555", font: dejavu-sans, font_size: 11, link: "https://github.com/{path.github}/pkgs/container/{slug.lower}" }
+  dev-latest:      { label: latest-dev, message: "dev-{sha:8}", color: "#3b82f6", font: dejavu-sans, font_size: 11, link: "https://github.com/{path.github}/pkgs/container/{slug.lower}" }
+  dev-updated:     { label: updated, message: "{registry.ghcr.tag.latest-dev.updated}", color: "#236144", font: dejavu-sans, font_size: 11 }
+  dev-size:        { label: size, message: "{registry.ghcr.tag.latest-dev.size}", color: "#555", font: dejavu-sans, font_size: 11, link: "https://github.com/{path.github}/pkgs/container/{slug.lower}" }
+
+  # Build-manifest inventories. Shared because nearly every image wants to show what
+  # it contains; a repo whose README lacks the markers simply renders nothing (scribe
+  # warns, never fails), and an image with more inventories (ansible: pip/galaxy/
+  # binaries) adds them in its own catalog entry.
+  contents-base: { type: contents, build: image, section: inventories.versions, render: badges }
+  contents-apk:  { type: contents, build: image, section: inventories.apk, render: badges }

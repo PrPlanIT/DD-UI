@@ -1,0 +1,33 @@
+# Scribe rows for a container repo: project + status + the image/registry row.
+scribe:
+  files:
+    readme.project:
+      file: README.md
+      between: ["<!-- sf:project:start -->", "<!-- sf:project:end -->"]
+      inline: true
+      items: [repo-gh, repo-gl, license, issues, prs, contributors, donate, sponsor]
+    readme.badges:
+      file: README.md
+      between: ["<!-- sf:badges:start -->", "<!-- sf:badges:end -->"]
+      inline: true
+      items: [release, build, last-commit, stagefreight]
+    readme.image:
+      file: README.md
+      between: ["<!-- sf:image:start -->", "<!-- sf:image:end -->"]
+      items: [ghcr, docker, pulls, harbor, br, release-latest, release-updated, release-size, dev-latest, dev-updated, dev-size]
+    readme.contents.base:
+      file: README.md
+      between: ["<!-- sf:contents-base:start -->", "<!-- sf:contents-base:end -->"]
+      items: [contents-base]
+    readme.contents.apk:
+      file: README.md
+      between: ["<!-- sf:contents-apk:start -->", "<!-- sf:contents-apk:end -->"]
+      items: [contents-apk]
+  commit:
+    type: docs
+    message: "refresh generated badges"
+    add:
+      - README.md
+      - ".stagefreight/scribe"
+    push: true
+    skip_ci: true

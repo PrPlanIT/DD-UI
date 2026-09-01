@@ -1,0 +1,59 @@
+# publish — docker bucket (from osticket, the preferred config): stable/prerelease/dev to
+# dockerhub+ghcr+harbor, project-metadata, release. Build id is the generic 'image'.
+publish:
+  stable:
+    kind: registry
+    registry: [dockerhub, ghcr, harbor]
+    build: image
+    tags: ["v{version}", "latest"]
+    when: { git_tags: [stable], events: [tag] }
+
+  prerelease:
+    kind: registry
+    registry: [dockerhub, ghcr, harbor]
+    build: image
+    tags: ["v{version}"]
+    when: { git_tags: [prerelease], events: [tag] }
+
+  dev:
+    kind: registry
+    registry: [dockerhub, ghcr, harbor]
+    build: image
+    tags: ["dev-{sha:8}", "latest-dev"]
+    when: { branches: [main], events: [push] }
+    retention:
+      keep_last: 2   # latest-dev is rolling (no sequence var) → auto-exempt, no protect needed
+
+  project-metadata:
+    kind: metadata
+    registry: [dockerhub, harbor]
+    repos: [primary, github-mirror]
+    readme: README.md
+    when: { branches: [main], events: [push, tag] }
+    # description + topics are per-repo — each satellite declares its own in its
+    # local .stagefreight.yml; the two-file merge combines them with this structure.
+
+  release:
+    kind: release
+    type: latest
+    repos: [primary]
+    aliases: ["v{version}", "latest"]
+    when: { git_tags: [stable], events: [tag] }
+
+  # A forge release for every main push, so the current dev image is reachable from the
+  # repo and not only from a registry tag someone has to know to look for. Kept to the
+  # last 2: a dev release is a pointer to "what main is right now", so history beyond
+  # the previous one is noise that buries the stable releases in the same list.
+  dev-release:
+    kind: release
+    type: prerelease
+    repos: [primary]
+    # A main push carries no tag, and a release must attach to one — without tag: the
+    # target resolves to nothing and silently produces no release at all. dev-{sha:8}
+    # is the immutable generation; latest-dev is the rolling alias that always points
+    # at the current one, mirroring the image tags this repo already publishes.
+    tag: "dev-{sha:8}"
+    aliases: ["latest-dev"]
+    when: { branches: [main], events: [push] }
+    retention:
+      keep_last: 2
