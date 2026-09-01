@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 
@@ -47,20 +46,20 @@ func (h *GitSyncHandlers) GetConfig(w http.ResponseWriter, r *http.Request) {
 
 	// Don't expose sensitive fields in full
 	response := map[string]interface{}{
-		"repo_url":           config.RepoURL,
-		"branch":             config.Branch,
-		"has_token":          config.AuthToken != "",
-		"has_ssh_key":        config.SSHKey != "",
-		"commit_author_name": config.CommitAuthorName,
+		"repo_url":            config.RepoURL,
+		"branch":              config.Branch,
+		"has_token":           config.AuthToken != "",
+		"has_ssh_key":         config.SSHKey != "",
+		"commit_author_name":  config.CommitAuthorName,
 		"commit_author_email": config.CommitAuthorEmail,
-		"sync_enabled":       config.SyncEnabled,
-		"sync_mode":          config.SyncMode,
-		"force_on_conflict":  config.ForceOnConflict,
-		"auto_push":          config.AutoPush,
-		"auto_pull":          config.AutoPull,
-		"pull_interval_mins": config.PullIntervalMins,
-		"push_on_change":     config.PushOnChange,
-		"sync_path":          config.SyncPath,
+		"sync_enabled":        config.SyncEnabled,
+		"sync_mode":           config.SyncMode,
+		"force_on_conflict":   config.ForceOnConflict,
+		"auto_push":           config.AutoPush,
+		"auto_pull":           config.AutoPull,
+		"pull_interval_mins":  config.PullIntervalMins,
+		"push_on_change":      config.PushOnChange,
+		"sync_path":           config.SyncPath,
 	}
 
 	common.DebugLog("Returning config: repo=%s, branch=%s, author=%s <%s>",
@@ -123,7 +122,7 @@ func (h *GitSyncHandlers) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
-		"status": "success",
+		"status":  "success",
 		"message": "Configuration saved successfully",
 	})
 }
@@ -163,7 +162,7 @@ func (h *GitSyncHandlers) Pull(w http.ResponseWriter, r *http.Request) {
 		common.ErrorLog("Git pull failed: %v", err)
 
 		response := map[string]interface{}{
-			"status": "error",
+			"status":  "error",
 			"message": err.Error(),
 		}
 
@@ -182,7 +181,7 @@ func (h *GitSyncHandlers) Pull(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
-		"status": "success",
+		"status":  "success",
 		"message": "Repository pulled successfully",
 	})
 }
@@ -209,7 +208,7 @@ func (h *GitSyncHandlers) Push(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
-		"status": "success",
+		"status":  "success",
 		"message": "Changes pushed successfully",
 	})
 }
@@ -224,7 +223,7 @@ func (h *GitSyncHandlers) Sync(w http.ResponseWriter, r *http.Request) {
 		common.ErrorLog("Git sync failed: %v", err)
 
 		response := map[string]interface{}{
-			"status": "error",
+			"status":  "error",
 			"message": err.Error(),
 		}
 
@@ -243,7 +242,7 @@ func (h *GitSyncHandlers) Sync(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
-		"status": "success",
+		"status":  "success",
 		"message": "Repository synchronized successfully",
 	})
 }
@@ -311,7 +310,7 @@ func (h *GitSyncHandlers) ResolveConflict(w http.ResponseWriter, r *http.Request
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
-		"status": "success",
+		"status":  "success",
 		"message": "Conflict resolved",
 	})
 }
@@ -326,7 +325,7 @@ func (h *GitSyncHandlers) CheckInitialSetupConflict(w http.ResponseWriter, r *ht
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"has_conflict": false,
-			"message": "No repository configured",
+			"message":      "No repository configured",
 		})
 		return
 	}
@@ -354,37 +353,11 @@ func (h *GitSyncHandlers) CheckInitialSetupConflict(w http.ResponseWriter, r *ht
 
 	// Only check remote if we have local files
 	if hasLocalFiles {
-		// Test connection to see if remote exists and has files
-		cmd := exec.Command("git", "ls-remote", "--heads", config.RepoURL, config.Branch)
-		cmd.Env = os.Environ()
-
-		// Add authentication if provided
-		if config.AuthToken != "" {
-			cmd.Env = append(cmd.Env,
-				"GIT_ASKPASS=/bin/echo",
-				"GIT_USERNAME=token",
-				fmt.Sprintf("GIT_PASSWORD=%s", config.AuthToken),
-			)
-		} else if config.SSHKey != "" {
-			// Create temporary SSH key file for authentication
-			tmpFile, err := os.CreateTemp("/tmp", "ddui_conflict_check_ssh_*.pem")
-			if err == nil {
-				sshKeyContent := config.SSHKey
-				if !strings.HasSuffix(sshKeyContent, "\n") {
-					sshKeyContent += "\n"
-				}
-				tmpFile.WriteString(sshKeyContent)
-				tmpFile.Close()
-				os.Chmod(tmpFile.Name(), 0600)
-				defer os.Remove(tmpFile.Name())
-
-				cmd.Env = append(cmd.Env,
-					fmt.Sprintf("GIT_SSH_COMMAND=ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes -o LogLevel=ERROR", tmpFile.Name()),
-				)
-			}
-		}
-
-		if output, err := cmd.CombinedOutput(); err == nil && len(output) > 0 {
+		// Test connection to see if the remote exists and already carries the branch.
+		// An unreachable or empty remote is not a conflict, so any error here simply
+		// leaves hasConflict false — same as the previous behaviour, which ignored a
+		// failed ls-remote.
+		if heads, err := listRemoteHeads(config.RepoURL, config.AuthToken, config.SSHKey); err == nil && branchInHeads(heads, config.Branch) {
 			// Remote exists and has content - this indicates potential conflict
 			hasConflict = true
 			message = "Both local (/data) and remote repository contain files. Choose Push to overwrite remote with local, Pull to overwrite local with remote, or manually resolve before enabling sync."
@@ -393,8 +366,8 @@ func (h *GitSyncHandlers) CheckInitialSetupConflict(w http.ResponseWriter, r *ht
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"has_conflict": hasConflict,
-		"message": message,
+		"has_conflict":    hasConflict,
+		"message":         message,
 		"has_local_files": hasLocalFiles,
 	})
 }
@@ -416,7 +389,7 @@ func (h *GitSyncHandlers) TestConnection(w http.ResponseWriter, r *http.Request)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{
-			"status": "error",
+			"status":  "error",
 			"message": "Invalid request format",
 		})
 		return
@@ -435,7 +408,7 @@ func (h *GitSyncHandlers) TestConnection(w http.ResponseWriter, r *http.Request)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{
-			"status": "error",
+			"status":  "error",
 			"message": "Repository URL is required",
 		})
 		return
@@ -449,7 +422,7 @@ func (h *GitSyncHandlers) TestConnection(w http.ResponseWriter, r *http.Request)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{
-			"status": "error",
+			"status":  "error",
 			"message": "HTTPS URL requires a token, not SSH key. Either use SSH URL format (git@gitlab.prplanit.com:user/repo.git) or provide a Personal Access Token instead of SSH key.",
 		})
 		return
@@ -459,7 +432,7 @@ func (h *GitSyncHandlers) TestConnection(w http.ResponseWriter, r *http.Request)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{
-			"status": "error",
+			"status":  "error",
 			"message": "SSH URL requires an SSH key, not a token. Either use HTTPS URL format or provide an SSH key instead of token.",
 		})
 		return
@@ -480,149 +453,33 @@ func (h *GitSyncHandlers) TestConnection(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	// Test connection by attempting to ls-remote
-	common.DebugLog("TestConnection: Running git ls-remote --heads %s", req.RepoURL)
-	cmd := exec.Command("git", "ls-remote", "--heads", req.RepoURL)
-	cmd.Env = os.Environ() // Start with current environment
-
-	// Add authentication if provided
-	if req.AuthToken != "" {
-		common.DebugLog("TestConnection: Using token authentication for HTTPS")
-		cmd.Env = append(cmd.Env,
-			"GIT_ASKPASS=/bin/echo",
-			"GIT_USERNAME=token",
-			fmt.Sprintf("GIT_PASSWORD=%s", req.AuthToken),
-		)
-	} else if req.SSHKey != "" {
-		common.DebugLog("TestConnection: Using SSH key authentication")
-		// Create a unique temporary file for the SSH key
-		tmpFile, err := os.CreateTemp("/tmp", "ddui_test_ssh_key_*.pem")
-		if err != nil {
-			common.ErrorLog("TestConnection: Failed to create temp SSH key file: %v", err)
+	// Test the connection by listing the remote's branches. No git binary is involved:
+	// the runtime image has none, so the previous `git ls-remote` failed there for every
+	// repository and credential alike.
+	common.DebugLog("TestConnection: Listing remote heads for %s", req.RepoURL)
+	heads, listErr := listRemoteHeads(req.RepoURL, req.AuthToken, req.SSHKey)
+	if listErr != nil {
+		if errorMsg := remoteErrorMessage(listErr); errorMsg != "" {
+			common.ErrorLog("TestConnection: %v", listErr)
 			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusInternalServerError)
+			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(map[string]string{
-				"status": "error",
-				"message": "Failed to process SSH key",
+				"status":  "error",
+				"message": errorMsg,
 			})
 			return
 		}
-
-		// Write SSH key ensuring it has proper line ending
-		sshKeyContent := req.SSHKey
-		if !strings.HasSuffix(sshKeyContent, "\n") {
-			sshKeyContent += "\n"
-		}
-
-		if _, err := tmpFile.WriteString(sshKeyContent); err != nil {
-			common.ErrorLog("TestConnection: Failed to write SSH key: %v", err)
-			tmpFile.Close()
-			os.Remove(tmpFile.Name())
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(map[string]string{
-				"status": "error",
-				"message": "Failed to process SSH key",
-			})
-			return
-		}
-		tmpFile.Close()
-
-		// Set proper permissions
-		if err := os.Chmod(tmpFile.Name(), 0600); err != nil {
-			common.ErrorLog("TestConnection: Failed to set SSH key permissions: %v", err)
-			os.Remove(tmpFile.Name())
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(map[string]string{
-				"status": "error",
-				"message": "Failed to process SSH key",
-			})
-			return
-		}
-		defer os.Remove(tmpFile.Name())
-
-		cmd.Env = append(cmd.Env,
-			fmt.Sprintf("GIT_SSH_COMMAND=ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes -o LogLevel=ERROR", tmpFile.Name()),
-		)
-	}
-
-	output, err := cmd.CombinedOutput()
-	outputStr := string(output)
-
-	if err != nil {
-		common.ErrorLog("TestConnection: Command failed: %v", err)
-		common.ErrorLog("TestConnection: Output length: %d", len(outputStr))
-		if outputStr != "" {
-			common.ErrorLog("TestConnection: Output: %s", outputStr)
-		} else {
-			common.ErrorLog("TestConnection: No output from git command")
-		}
-
-		// Parse error message for common issues
-		var errorMsg string
-
-		// Check for SSH-specific errors
-		if strings.Contains(outputStr, "Permission denied (publickey") {
-			errorMsg = "SSH authentication failed. Please check your SSH key has access to the repository."
-		} else if strings.Contains(outputStr, "Permission denied") {
-			errorMsg = "Authentication failed. Check your credentials."
-		} else if strings.Contains(outputStr, "Host key verification failed") {
-			// This shouldn't happen since we use StrictHostKeyChecking=no
-			// Log the full error for debugging
-			common.ErrorLog("Unexpected SSH host key verification error with StrictHostKeyChecking=no: %s", outputStr)
-			errorMsg = "SSH host key verification failed unexpectedly. Full error: " + strings.TrimSpace(outputStr)
-		} else if strings.Contains(outputStr, "Could not resolve hostname") || strings.Contains(outputStr, "Name or service not known") {
-			errorMsg = "Cannot reach repository. Check the URL and network connection."
-		} else if strings.Contains(outputStr, "port 22: Connection refused") || strings.Contains(outputStr, "port 2424: Connection refused") {
-			errorMsg = "Connection refused. Check if the Git server is running and the port is correct."
-		} else if strings.Contains(outputStr, "Repository not found") || strings.Contains(outputStr, "does not exist") {
-			errorMsg = "Repository not found. Check the URL and access permissions."
-		} else if strings.Contains(outputStr, "fatal:") {
-			// Extract the fatal error message
-			lines := strings.Split(outputStr, "\n")
-			for _, line := range lines {
-				if strings.Contains(line, "fatal:") {
-					errorMsg = strings.TrimPrefix(line, "fatal: ")
-					break
-				}
-			}
-			if errorMsg == "" {
-				errorMsg = "Git command failed: " + outputStr
-			}
-		} else if strings.TrimSpace(outputStr) == "" {
-			// No output at all - provide a generic but helpful message
-			errorMsg = "Connection test failed. Please verify: 1) Repository URL is correct, 2) Authentication credentials are valid, 3) Network connectivity to Git server"
-		} else {
-			errorMsg = fmt.Sprintf("Connection failed: %s", strings.TrimSpace(outputStr))
-		}
-
-		// Ensure we always have an error message
-		if errorMsg == "" || errorMsg == "Connection failed: " {
-			errorMsg = "Connection test failed. Please check your repository URL and credentials."
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"status": "error",
-			"message": errorMsg,
-		})
-		return
+		// An empty remote is reachable and authorized — the connection test passed,
+		// there is simply no branch on it yet.
+		heads = nil
 	}
 
 	// Check if branch exists
-	branchExists := false
-	for _, line := range strings.Split(string(output), "\n") {
-		if strings.Contains(line, fmt.Sprintf("refs/heads/%s", req.Branch)) {
-			branchExists = true
-			break
-		}
-	}
+	branchExists := branchInHeads(heads, req.Branch)
 
 	response := map[string]interface{}{
-		"status": "success",
-		"message": "Connection successful",
+		"status":        "success",
+		"message":       "Connection successful",
 		"branch_exists": branchExists,
 	}
 
@@ -633,4 +490,3 @@ func (h *GitSyncHandlers) TestConnection(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
-
