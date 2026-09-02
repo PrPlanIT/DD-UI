@@ -35,6 +35,8 @@ publish:
 
   release:
     kind: release
+    security_summary: true
+    registry_links: true
     type: latest
     repos: [primary]
     aliases: ["v{version}", "latest"]
@@ -46,6 +48,8 @@ publish:
   # the previous one is noise that buries the stable releases in the same list.
   dev-release:
     kind: release
+    security_summary: true
+    registry_links: true
     type: prerelease
     repos: [primary]
     # A main push carries no tag, and a release must attach to one — without tag: the
