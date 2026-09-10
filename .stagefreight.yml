@@ -45,7 +45,7 @@ metadata:
   description:
     - Web UI for managing Docker hosts and their compose stacks.
     - Browser interface over Docker and compose deployments, for inspecting and operating containers across hosts.
-  license: MIT
+  license: AGPL-3.0-only
   org: PrPlanIT
   title: DD-UI
   topics:

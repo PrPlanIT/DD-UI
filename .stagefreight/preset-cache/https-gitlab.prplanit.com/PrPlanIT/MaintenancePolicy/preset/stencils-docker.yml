@@ -13,7 +13,10 @@ stencils:
   release-latest:  { label: latest, message: "v{base}", color: "#74ecbe", font: dejavu-sans, font_size: 11, link: "https://github.com/{path.github}/pkgs/container/{slug.lower}" }
   release-updated: { label: updated, message: "{registry.ghcr.tag.v{base}.updated}", color: "#236144", font: dejavu-sans, font_size: 11 }
   release-size:    { label: size, message: "{registry.ghcr.tag.v{base}.size}", color: "#555", font: dejavu-sans, font_size: 11, link: "https://github.com/{path.github}/pkgs/container/{slug.lower}" }
-  dev-latest:      { label: latest-dev, message: "dev-{sha:8}", color: "#3b82f6", font: dejavu-sans, font_size: 11, link: "https://github.com/{path.github}/pkgs/container/{slug.lower}" }
+  # An escaped literal, not the resolved sha: the badge exists to say the dev tag is a thing
+  # and how it is spelled. Resolving it would rewrite this committed SVG on every dev build
+  # for a value nobody reads out of the repo — the tag itself is where you look it up.
+  dev-latest:      { label: latest-dev, message: "dev-{{sha}}", color: "#3b82f6", font: dejavu-sans, font_size: 11, link: "https://github.com/{path.github}/pkgs/container/{slug.lower}" }
   dev-updated:     { label: updated, message: "{registry.ghcr.tag.latest-dev.updated}", color: "#236144", font: dejavu-sans, font_size: 11 }
   dev-size:        { label: size, message: "{registry.ghcr.tag.latest-dev.size}", color: "#555", font: dejavu-sans, font_size: 11, link: "https://github.com/{path.github}/pkgs/container/{slug.lower}" }
 
