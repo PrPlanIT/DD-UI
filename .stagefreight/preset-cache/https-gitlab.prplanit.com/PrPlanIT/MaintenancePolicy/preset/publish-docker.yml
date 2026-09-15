@@ -42,6 +42,19 @@ publish:
     aliases: ["v{version}", "latest"]
     when: { git_tags: [stable], events: [tag] }
 
+  # A prerelease tag (-rc and friends) already publishes an image through publish.prerelease
+  # above, but had no release-kind target — so the policy gate refused it and the tag produced
+  # a registry tag with nothing in the repo pointing at it. Same shape as release, marked
+  # prerelease so it does not displace the latest stable one, and without the "latest" alias
+  # for the same reason.
+  prerelease-release:
+    kind: release
+    security_summary: true
+    registry_links: true
+    type: prerelease
+    repos: [primary]
+    when: { git_tags: [prerelease], events: [tag] }
+
   # A forge release for every main push, so the current dev image is reachable from the
   # repo and not only from a registry tag someone has to know to look for. Kept to the
   # last 2: a dev release is a pointer to "what main is right now", so history beyond

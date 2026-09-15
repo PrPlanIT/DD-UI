@@ -8,7 +8,11 @@
 stencils:
   ghcr:            { render: shield, label: GHCR,   message: "{path.ghcr}", color: "#181717", logo: github, logo_color: white, link: "https://github.com/{path.github}/pkgs/container/{slug.lower}" }
   docker:          { render: shield, label: Docker, message: "{path.dockerhub}", color: "#2496ED", logo: docker, logo_color: white, link: "https://hub.docker.com/r/{path.dockerhub}" }
-  pulls:           { label: pulls, message: "{registry.dockerhub.pulls}", color: "#1d63ed", link: "https://hub.docker.com/r/{path.dockerhub}" }
+  # A live endpoint, not a rendered SVG. The pull count moves continuously, so resolving
+  # it into a committed badge produced a docs commit on nearly every pipeline — and those
+  # commits are what cancel in-flight pipelines, so the churn cost more than the badge was
+  # worth. Same reasoning as dev-latest below, which escapes its sha for the same reason.
+  pulls:           { render: shield, label: pulls, shield: "docker/pulls/{path.dockerhub}?color=1d63ed&logo=docker&logoColor=white", link: "https://hub.docker.com/r/{path.dockerhub}" }
   harbor:          { render: shield, label: Harbor, message: "{path.harbor}", color: "#60b932", link: "https://cr.pcfae.com/harbor/projects" }
   release-latest:  { label: latest, message: "v{base}", color: "#74ecbe", font: dejavu-sans, font_size: 11, link: "https://github.com/{path.github}/pkgs/container/{slug.lower}" }
   release-updated: { label: updated, message: "{registry.ghcr.tag.v{base}.updated}", color: "#236144", font: dejavu-sans, font_size: 11 }
