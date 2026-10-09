@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------------------
 # GENERATED / ENFORCED BY STAGEFREIGHT GOVERNANCE
 # Source repo: PrPlanIT/MaintenancePolicy
-# Profile: prplanit-docker
+# Profile: prplanit-go-image
 # This .stagefreight.yml is governed, not purely local.
 # To disable governance, detach from the control repo workflow.
 # Manual changes may be overwritten by reconciliation.
@@ -17,9 +17,9 @@ vars:
 builds:
   preset: https://gitlab.prplanit.com/PrPlanIT/MaintenancePolicy//preset/build-docker.yml
 scribe:
-  preset: https://gitlab.prplanit.com/PrPlanIT/MaintenancePolicy//preset/scribe-docker.yml
+  preset: https://gitlab.prplanit.com/PrPlanIT/MaintenancePolicy//preset/scribe-go-docker.yml
 lint:
-  preset: https://gitlab.prplanit.com/PrPlanIT/MaintenancePolicy//preset/lint-generic.yml
+  preset: https://gitlab.prplanit.com/PrPlanIT/MaintenancePolicy//preset/lint-flagships.yml
 security:
   preset: https://gitlab.prplanit.com/PrPlanIT/MaintenancePolicy//preset/security.yml
 dependency:
@@ -104,6 +104,7 @@ stencils:
     - https://gitlab.prplanit.com/PrPlanIT/MaintenancePolicy//preset/stencils-base.yml
     - https://gitlab.prplanit.com/PrPlanIT/MaintenancePolicy//preset/stencils-status.yml
     - https://gitlab.prplanit.com/PrPlanIT/MaintenancePolicy//preset/stencils-docker.yml
+    - https://gitlab.prplanit.com/PrPlanIT/MaintenancePolicy//preset/stencils-go.yml
 test:
   preset: https://gitlab.prplanit.com/PrPlanIT/MaintenancePolicy//preset/test-go.yml
 toolchains:

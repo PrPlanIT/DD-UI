@@ -1,0 +1,25 @@
+# Scribe rows for a Go container repo: project + status (Go badge) + image row.
+scribe:
+  files:
+    readme.project:
+      file: README.md
+      between: ["<!-- sf:project:start -->", "<!-- sf:project:end -->"]
+      inline: true
+      items: [repo-gh, repo-gl, license, issues, prs, contributors, donate, sponsor]
+    readme.badges:
+      file: README.md
+      between: ["<!-- sf:badges:start -->", "<!-- sf:badges:end -->"]
+      inline: true
+      items: [release, build, go-version, go-reference, last-commit, stagefreight]
+    readme.image:
+      file: README.md
+      between: ["<!-- sf:image:start -->", "<!-- sf:image:end -->"]
+      items: [ghcr, docker, pulls, harbor, br, release-latest, release-updated, release-size, dev-latest, dev-updated, dev-size]
+  commit:
+    type: docs
+    message: "refresh generated badges"
+    add:
+      - README.md
+      - ".stagefreight/scribe"
+    push: true
+    skip_ci: true
