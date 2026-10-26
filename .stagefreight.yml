@@ -109,3 +109,7 @@ test:
   preset: https://gitlab.prplanit.com/PrPlanIT/MaintenancePolicy//preset/test-go.yml
 toolchains:
   preset: https://gitlab.prplanit.com/PrPlanIT/MaintenancePolicy//preset/toolchains.yml
+  want:
+    presets:
+      - https://gitlab.prplanit.com/PrPlanIT/MaintenancePolicy//preset/toolchains-scanners.yml
+      - https://gitlab.prplanit.com/PrPlanIT/MaintenancePolicy//preset/toolchains-go.yml
