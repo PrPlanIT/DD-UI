@@ -40,11 +40,6 @@ workflow:
   - export SF_CI_WORKSPACE="$PWD"
   - export SF_CI_PIPELINE_ID="${CI_PIPELINE_ID}"
 
-.transport: &transport
-  DOCKER_HOST: "tcp://dind:2376"
-  DOCKER_TLS_VERIFY: "1"
-  DOCKER_CERT_PATH: "/certs/client"
-
 default:
   image: docker.cr.pcfae.com/prplanit/stagefreight:latest-dev
   interruptible: true
@@ -53,7 +48,6 @@ audition:
   stage: audition
   variables:
     GIT_DEPTH: 0
-    <<: *transport
   before_script:
     - *sf-context
   script:
@@ -71,7 +65,6 @@ perform:
       aud: stagefreight
   variables:
     GIT_DEPTH: 0
-    <<: *transport
   before_script:
     - *sf-context
   script:
@@ -85,8 +78,6 @@ perform:
 review:
   stage: review
   needs: [perform]
-  variables:
-    <<: *transport
   before_script:
     - *sf-context
   script:
