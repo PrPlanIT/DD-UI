@@ -40,7 +40,7 @@ builds:
 forges:
   - id: gitlab
     provider: gitlab
-    url: "https://gitlab.prplanit.com"
+    url: "https://git.optcp.com"
     credentials: GITLAB
 
   - id: github
@@ -328,7 +328,7 @@ badges:
       color: auto
       font: monofur
       output: ".stagefreight/badges/build.svg"
-      link: "https://gitlab.prplanit.com/{var:gitlab_group}/{var:repo}/-/pipelines"
+      link: "https://git.optcp.com/{var:gitlab_group}/{var:repo}/-/pipelines"
     - id: license
       text: license
       value: "AGPL-3.0-or-later"
@@ -444,7 +444,7 @@ narrator:
           mode: replace
           inline: true
         shield: "badge/GitLab-source-FC6D26?logo=gitlab"
-        link: "https://gitlab.prplanit.com/{var:gitlab_group}/{var:repo}"
+        link: "https://git.optcp.com/{var:gitlab_group}/{var:repo}"
       - id: project.last-commit
         kind: props
         type: github-last-commit

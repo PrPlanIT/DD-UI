@@ -22,4 +22,4 @@ Commercial licenses are available for organizations that want alternative terms 
 If your organization exceeds the thresholds above, or needs terms beyond what AGPL-3.0-or-later provides, reach out for a commercial license:
 
 - Email: sofmeright@gmail.com / precisionplanit@gmail.com
-- Source: [gitlab.prplanit.com/PrPlanIT/dd-ui](https://gitlab.prplanit.com/PrPlanIT/dd-ui)
+- Source: [git.optcp.com/PrPlanIT/dd-ui](https://git.optcp.com/PrPlanIT/dd-ui)

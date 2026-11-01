@@ -450,7 +450,7 @@ func (h *GitSyncHandlers) TestConnection(w http.ResponseWriter, r *http.Request)
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{
 			"status": "error",
-			"message": "HTTPS URL requires a token, not SSH key. Either use SSH URL format (git@gitlab.prplanit.com:user/repo.git) or provide a Personal Access Token instead of SSH key.",
+			"message": "HTTPS URL requires a token, not SSH key. Either use SSH URL format (git@git.optcp.com:user/repo.git) or provide a Personal Access Token instead of SSH key.",
 		})
 		return
 	}
