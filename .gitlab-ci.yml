@@ -86,6 +86,7 @@ review:
     paths:
       - .stagefreight/security/
       - .stagefreight/subsystems/
+    when: always
     expire_in: 1 week
   allow_failure: true
 
@@ -105,6 +106,7 @@ publish:
     - stagefreight ci run publish
   artifacts:
     paths: [.stagefreight/subsystems/]
+    when: always
     expire_in: 1 week
   allow_failure: true
 
