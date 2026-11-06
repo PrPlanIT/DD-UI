@@ -1,7 +1,7 @@
 // src/api/go.mod
 module dd-ui
 
-go 1.25.0
+go 1.27.3
 
 require (
 	github.com/alexedwards/scs/v2 v2.9.0

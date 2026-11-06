@@ -17,7 +17,7 @@ COPY ui/ .
 RUN npm run build
 
 # --- Go build ---
-FROM golang:1.25.14-alpine AS api
+FROM golang:1.27.3-alpine AS api
 WORKDIR /api
 COPY api/go.mod ./
 RUN go mod download
@@ -81,14 +81,14 @@ RUN set -eux; \
       chmod +x /usr/local/lib/docker/cli-plugins/docker-compose; \
       docker compose version
 
-# Build SOPS from source with Go 1.25.1 (latest stable) to avoid all vulnerabilities
+# Build SOPS from source with Go 1.27.3 (latest stable) to avoid all vulnerabilities
 # The pre-built binaries and Alpine's Go have vulnerabilities
 ARG SOPS_VERSION=3.10.2
-ARG GO_VERSION=1.25.1
+ARG GO_VERSION=1.27.3
 RUN set -eux; \
     # Install build dependencies \
     apk add --no-cache --virtual .build-deps git && \
-    # Download and install Go 1.25.1 to build SOPS without vulnerabilities \
+    # Download and install Go 1.27.3 to build SOPS without vulnerabilities \
     arch="$(uname -m)"; \
     case "$arch" in \
     x86_64)  go_arch="amd64" ;; \
