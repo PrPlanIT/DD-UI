@@ -7,6 +7,7 @@ publish:
     build: image
     tags: ["v{version}", "latest"]
     when: { git_tags: [stable], events: [tag] }
+    signing_profile: release
 
   prerelease:
     kind: registry
@@ -14,6 +15,7 @@ publish:
     build: image
     tags: ["v{version}"]
     when: { git_tags: [prerelease], events: [tag] }
+    signing_profile: release
 
   dev:
     kind: registry
