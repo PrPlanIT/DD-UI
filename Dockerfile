@@ -1,5 +1,5 @@
 # --- UI build ---
-FROM node:22.23.2-alpine AS ui
+FROM node:22.23.5-alpine AS ui
 WORKDIR /ui
 
 # copy lockfile if it exists
@@ -17,7 +17,7 @@ COPY ui/ .
 RUN npm run build
 
 # --- Go build ---
-FROM golang:1.27.3-alpine AS api
+FROM golang:1.27.4-alpine AS api
 WORKDIR /api
 COPY api/go.mod ./
 RUN go mod download
@@ -31,7 +31,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} \
 
 # --- Runtime ---
 # Using Alpine for smaller size and better security maintenance
-FROM alpine:3.21.7
+FROM alpine:3.21.10
 
 LABEL maintainer="SoFMeRight <sofmeright@gmail.com>" \
       org.opencontainers.image.title="DD-UI (Designated Driver UI)" \
