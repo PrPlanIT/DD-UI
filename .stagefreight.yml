@@ -113,6 +113,9 @@ stencils:
     - https://git.optcp.com/PrPlanIT/MaintenancePolicy//preset/stencils-go.yml
 test:
   preset: https://git.optcp.com/PrPlanIT/MaintenancePolicy//preset/test-go.yml
+  suites:
+    unit:
+      from: api
 toolchains:
   preset: https://git.optcp.com/PrPlanIT/MaintenancePolicy//preset/toolchains.yml
   want:
